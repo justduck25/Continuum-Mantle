@@ -1,0 +1,29 @@
+modLoader = "javafml"
+loaderVersion = "${loader_range}"
+issueTrackerURL = "https://github.com/SlimeKnights/Mantle/issues"
+logoFile = "Mantle.png"
+license = "MIT"
+
+[[mods]]
+modId = "mantle"
+version = "${version}"
+displayName = "Continuum Mantle"
+authors = "Slime Knights"
+description = '''
+Shared library code for the NeoForge 26.1 Tinkers' Construct port.
+'''
+displayURL = "https://minecraft.curseforge.com/projects/mantle"
+
+[[dependencies.mantle]]
+modId = "neoforge"
+mandatory = true
+versionRange = "${neo_range}"
+ordering = "NONE"
+side = "BOTH"
+
+[[dependencies.mantle]]
+modId = "minecraft"
+mandatory = true
+versionRange = "${minecraft_range}"
+ordering = "NONE"
+side = "BOTH"
