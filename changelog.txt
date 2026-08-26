@@ -1,4 +1,4 @@
-Continuum Mantle 26.1.2-1.11
+Continuum Mantle 26.1.2-1.11.1
 
 Port
 - Ported Mantle to Minecraft 26.1.2 and NeoForge 26.1.
