@@ -1,7 +1,7 @@
 package slimeknights.mantle.client.book.repository;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.resources.Resource;
 import org.apache.commons.io.IOUtils;
 import slimeknights.mantle.client.book.BookLoader;
@@ -18,21 +18,21 @@ import java.util.Optional;
 
 public class FileRepository extends BookRepository {
 
-  public final ResourceLocation location;
+  public final Identifier location;
 
-  public FileRepository(ResourceLocation location) {
+  public FileRepository(Identifier location) {
     this.location = location;
   }
 
   @Override
   public List<SectionData> getSections() {
-    return new ArrayList<>(Arrays.asList(BookLoader.getGson().fromJson(this.resourceToString(this.getResource(this.getResourceLocation("index.json"))), SectionData[].class)));
+    return new ArrayList<>(Arrays.asList(BookLoader.getGson().fromJson(this.resourceToString(this.getResource(this.getIdentifier("index.json"))), SectionData[].class)));
   }
 
   @Override
-  public ResourceLocation getResourceLocation(@Nullable String path, boolean safe) {
+  public Identifier getIdentifier(@Nullable String path, boolean safe) {
     if (path == null) {
-      return safe ? new ResourceLocation("") : null;
+      return safe ? Identifier.withDefaultNamespace("") : null;
     }
 
     if (!path.contains(":")) {
@@ -45,36 +45,36 @@ public class FileRepository extends BookRepository {
 
       String defaultLangPath = "en_us";
 
-      ResourceLocation res;
+      Identifier res;
 
       // TODO: this can be optimized if we return the resource instead of the location, how feasible is that in practice?
       //noinspection ConstantConditions - see above
       if (langPath != null) {
-        res = new ResourceLocation(this.location + "/" + langPath + "/" + path);
+        res = Identifier.parse(this.location + "/" + langPath + "/" + path);
         if (this.resourceExists(res)) {
           return res;
         }
       }
-      res = new ResourceLocation(this.location + "/" + defaultLangPath + "/" + path);
+      res = Identifier.parse(this.location + "/" + defaultLangPath + "/" + path);
       if (this.resourceExists(res)) {
         return res;
       }
-      res = new ResourceLocation(this.location + "/" + path);
+      res = Identifier.parse(this.location + "/" + path);
       if (this.resourceExists(res)) {
         return res;
       }
     } else {
-      ResourceLocation res = new ResourceLocation(path);
+      Identifier res = Identifier.parse(path);
       if (this.resourceExists(res)) {
         return res;
       }
     }
 
-    return safe ? new ResourceLocation("") : null;
+    return safe ? Identifier.withDefaultNamespace("") : null;
   }
 
   @Override
-  public Optional<Resource> getLocation(@Nullable ResourceLocation loc) {
+  public Optional<Resource> getLocation(@Nullable Identifier loc) {
     if (loc == null) {
       return Optional.empty();
     }

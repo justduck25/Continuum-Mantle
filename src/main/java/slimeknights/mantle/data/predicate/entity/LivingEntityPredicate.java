@@ -1,9 +1,11 @@
 package slimeknights.mantle.data.predicate.entity;
 
+import net.minecraft.tags.FluidTags;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
+import slimeknights.mantle.Mantle;
 import slimeknights.mantle.data.loadable.Loadables;
 import slimeknights.mantle.data.loadable.record.RecordLoadable;
 import slimeknights.mantle.data.loadable.record.SingletonLoader;
@@ -23,7 +25,7 @@ public interface LivingEntityPredicate extends IJsonPredicate<LivingEntity> {
   /** Predicate that matches all entities */
   LivingEntityPredicate NONE = simple(entity -> false);
   /** Loader for block state predicates */
-  RegistryPredicateRegistry<EntityType<?>,LivingEntity> LOADER = new RegistryPredicateRegistry<>("Entity Predicate", ANY, NONE, Loadables.ENTITY_TYPE, Entity::getType, "entities", Loadables.ENTITY_TYPE_TAG, (tag, entity) -> entity.getType().is(tag));
+  RegistryPredicateRegistry<EntityType<?>,LivingEntity> LOADER = new RegistryPredicateRegistry<>("Entity Predicate", ANY, NONE, Loadables.ENTITY_TYPE, Entity::getType, "entities", Loadables.ENTITY_TYPE_TAG, (tag, entity) -> entity.typeHolder().is(tag));
 
   /** Gets an inverted condition */
   @Override
@@ -60,13 +62,40 @@ public interface LivingEntityPredicate extends IJsonPredicate<LivingEntity> {
 
   // water
   /** Entities with eyes in water */
-  LivingEntityPredicate EYES_IN_WATER = simple(entity -> entity.wasEyeInWater);
+  LivingEntityPredicate EYES_IN_WATER = simple(entity -> entity.isEyeInFluid(FluidTags.WATER));
   /** Entities with feet in water */
   LivingEntityPredicate FEET_IN_WATER = simple(Entity::isInWater);
   /** Entities with head and feet are in water */
   LivingEntityPredicate UNDERWATER = simple(Entity::isUnderWater);
   /** Checks if the entity is being hit by rain at their location */
   LivingEntityPredicate RAINING = simple(entity -> entity.level().isRainingAt(entity.blockPosition()));
+  /** Registers builtin singleton predicates for serialization. */
+  @SuppressWarnings("unused")
+  boolean REGISTER_BUILTINS = registerBuiltins();
+
+  /** Registers builtin singleton predicates for serialization. */
+  static boolean registerBuiltins() {
+    LOADER.register(Mantle.getResource("water_sensitive"), WATER_SENSITIVE.getLoader());
+    LOADER.register(Mantle.getResource("fire_immune"), FIRE_IMMUNE.getLoader());
+    LOADER.register(Mantle.getResource("on_fire"), ON_FIRE.getLoader());
+    LOADER.register(Mantle.getResource("can_freeze"), CAN_FREEZE.getLoader());
+    LOADER.register(Mantle.getResource("freezing"), IS_FREEZING.getLoader());
+    LOADER.register(Mantle.getResource("powdered_snow"), IS_IN_POWDERED_SNOW.getLoader());
+    LOADER.register(Mantle.getResource("on_ground"), ON_GROUND.getLoader());
+    LOADER.register(Mantle.getResource("crouching"), CROUCHING.getLoader());
+    LOADER.register(Mantle.getResource("sprinting"), SPRINTING.getLoader());
+    LOADER.register(Mantle.getResource("blocking"), BLOCKING.getLoader());
+    LOADER.register(Mantle.getResource("elytra_flying"), ELYTRA_FLYING.getLoader());
+    LOADER.register(Mantle.getResource("eyes_in_water"), EYES_IN_WATER.getLoader());
+    LOADER.register(Mantle.getResource("feet_in_water"), FEET_IN_WATER.getLoader());
+    LOADER.register(Mantle.getResource("underwater"), UNDERWATER.getLoader());
+    LOADER.register(Mantle.getResource("raining"), RAINING.getLoader());
+    LOADER.register(Mantle.getResource("mob_type"), MobTypePredicate.LOADER);
+    LOADER.register(Mantle.getResource("has_mob_effect"), HasMobEffectPredicate.LOADER);
+    LOADER.register(Mantle.getResource("has_enchantment"), HasEnchantmentEntityPredicate.LOADER);
+    LOADER.register(Mantle.getResource("block_at_entity"), BlockAtEntityPredicate.LOADER);
+    return true;
+  }
 
   /** Creates a new predicate singleton */
   static LivingEntityPredicate simple(Predicate<LivingEntity> predicate) {

@@ -12,17 +12,17 @@ import net.minecraft.core.Registry;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.PackType;
 import net.minecraft.world.level.levelgen.structure.StructureSet;
-import net.minecraftforge.common.ForgeMod;
-import net.minecraftforge.common.world.BiomeModifier;
+
+import net.neoforged.neoforge.common.world.BiomeModifier;
 import slimeknights.mantle.Mantle;
 import slimeknights.mantle.util.JsonHelper;
 
 import java.nio.file.Path;
 
-import static net.minecraftforge.registries.ForgeRegistries.Keys.BIOME_MODIFIERS;
+import static net.neoforged.neoforge.registries.NeoForgeRegistries.Keys.BIOME_MODIFIERS;
 
 /**
  * Helpers to remove various non-recipe data.
@@ -58,7 +58,7 @@ public class RemoveDataCommand {
     if (key.isFor(registry)) {
       return (ResourceKey<T>) key;
     }
-    throw INVALID_REGISTRY.create(key, registry.location());
+    throw INVALID_REGISTRY.create(key, registry.identifier());
   }
 
   /** Empties the given structure set */
@@ -67,7 +67,7 @@ public class RemoveDataCommand {
     ResourceKey<StructureSet> id = getResourceKey(context, "id", Registries.STRUCTURE_SET);
 
     // start by fetching the existing structure set JSON
-    ResourceLocation setLocation = JsonHelper.wrap(id.location(), Registries.STRUCTURE_SET.location().getPath() + '/' , ".json");
+    Identifier setLocation = JsonHelper.wrap(id.identifier(), Registries.STRUCTURE_SET.identifier().getPath() + '/' , ".json");
 
     // determine the path for the resulting datapack
     Path pack = GeneratePackHelper.getDatapackPath(context.getSource().getServer());
@@ -81,7 +81,7 @@ public class RemoveDataCommand {
 
     // send success
     float time = (System.nanoTime() - startTime) / 1000000f;
-    context.getSource().sendSuccess(() -> Component.translatable(STRUCTURE_SET_SUCCESS, id.location(), time, GeneratePackHelper.getOutputComponent(pack)), true);
+    context.getSource().sendSuccess(() -> Component.translatable(STRUCTURE_SET_SUCCESS, id.identifier(), time, GeneratePackHelper.getOutputComponent(pack)), true);
     return 1;
   }
 
@@ -91,9 +91,9 @@ public class RemoveDataCommand {
     ResourceKey<BiomeModifier> id = getResourceKey(context, "id", BIOME_MODIFIERS);
 
     // start by fetching the existing structure set JSON
-    ResourceLocation modifierLocation = JsonHelper.wrap(id.location(), BIOME_MODIFIERS.location().getNamespace() + '/' + BIOME_MODIFIERS.location().getPath() + '/', ".json");
+    Identifier modifierLocation = JsonHelper.wrap(id.identifier(), BIOME_MODIFIERS.identifier().getNamespace() + '/' + BIOME_MODIFIERS.identifier().getPath() + '/', ".json");
     JsonObject json = new JsonObject();
-    json.addProperty("type", ForgeMod.NONE_BIOME_MODIFIER_TYPE.getId().toString());
+    json.addProperty("type", "neoforge:none");
 
     // determine the path for the resulting datapack
     Path pack = GeneratePackHelper.getDatapackPath(context.getSource().getServer());
@@ -101,12 +101,12 @@ public class RemoveDataCommand {
 
     Path path = pack.resolve(PackType.SERVER_DATA.getDirectory()).resolve(modifierLocation.getNamespace() + '/' + modifierLocation.getPath());
     if (!GeneratePackHelper.saveJson(json, path)) {
-      throw GeneratePackHelper.FAILED_SAVE.create(id.location());
+      throw GeneratePackHelper.FAILED_SAVE.create(id.identifier());
     }
 
     // send success
     float time = (System.nanoTime() - startTime) / 1000000f;
-    context.getSource().sendSuccess(() -> Component.translatable(BIOME_MODIFIER_SUCCESS, id.location(), time, GeneratePackHelper.getOutputComponent(pack)), true);
+    context.getSource().sendSuccess(() -> Component.translatable(BIOME_MODIFIER_SUCCESS, id.identifier(), time, GeneratePackHelper.getOutputComponent(pack)), true);
     return 1;
   }
 }

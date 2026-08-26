@@ -2,7 +2,7 @@ package slimeknights.mantle.command.argument;
 
 import net.minecraft.core.Registry;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.tags.TagKey;
 
 import javax.annotation.Nullable;
@@ -26,7 +26,7 @@ public interface TagSource<T> {
   boolean hasTag(TagKey<T> tag);
 
   /** Checks if the given tag is present */
-  default boolean hasTag(ResourceLocation tag) {
+  default boolean hasTag(Identifier tag) {
     return hasTag(TagKey.create(key(), tag));
   }
 
@@ -42,17 +42,17 @@ public interface TagSource<T> {
 
   /** Gets a stream of values in the given tag, or null if the tag is missing */
   @Nullable
-  default List<T> valuesInTag(ResourceLocation tag) {
+  default List<T> valuesInTag(Identifier tag) {
     return valuesInTag(TagKey.create(key(), tag));
   }
 
   /** Gets a collection of keys in the given tag, or null if the tag is missing */
   @Nullable
-  List<ResourceLocation> keysInTag(TagKey<T> tag);
+  List<Identifier> keysInTag(TagKey<T> tag);
 
   /** Gets a stream of keys in the given tag, or null if the tag is missing */
   @Nullable
-  default List<ResourceLocation> keysInTag(ResourceLocation tag) {
+  default List<Identifier> keysInTag(Identifier tag) {
     return keysInTag(TagKey.create(key(), tag));
   }
 
@@ -61,11 +61,11 @@ public interface TagSource<T> {
 
   /** Gets the value with the given key */
   @Nullable
-  T getValue(ResourceLocation key);
+  T getValue(Identifier key);
 
   /** Gets all tag keys for the given value in the registry */
   Stream<TagKey<T>> tagsFor(T value);
 
   /** Gets a stream of all value keys in the registry */
-  Stream<ResourceLocation> valueKeys();
+  Stream<Identifier> valueKeys();
 }

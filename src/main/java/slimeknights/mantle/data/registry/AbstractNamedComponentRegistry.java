@@ -4,9 +4,9 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonSyntaxException;
 import io.netty.handler.codec.DecoderException;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import slimeknights.mantle.data.loadable.field.LoadableField;
-import slimeknights.mantle.data.loadable.primitive.ResourceLocationLoadable;
+import slimeknights.mantle.data.loadable.primitive.IdentifierLoadable;
 import slimeknights.mantle.util.typed.TypedMap;
 
 import javax.annotation.Nullable;
@@ -14,7 +14,7 @@ import java.util.Collection;
 import java.util.function.Function;
 
 /** Shared logic for registries that map a resource location to an object. */
-public abstract class AbstractNamedComponentRegistry<T> implements ResourceLocationLoadable<T> {
+public abstract class AbstractNamedComponentRegistry<T> implements IdentifierLoadable<T> {
   /** Name to make exceptions clearer */
   protected final String errorText;
 
@@ -24,10 +24,10 @@ public abstract class AbstractNamedComponentRegistry<T> implements ResourceLocat
 
   /** Gets a value or null if missing */
   @Nullable
-  public abstract T getValue(ResourceLocation name);
+  public abstract T getValue(Identifier name);
 
   /** Gets all keys registered */
-  public abstract Collection<ResourceLocation> getKeys();
+  public abstract Collection<Identifier> getKeys();
 
   /** Gets all keys registered */
   public abstract Collection<T> getValues();
@@ -36,7 +36,7 @@ public abstract class AbstractNamedComponentRegistry<T> implements ResourceLocat
   /* Json */
 
   @Override
-  public T fromKey(ResourceLocation name, String key, TypedMap context) {
+  public T fromKey(Identifier name, String key, TypedMap context) {
     T value = getValue(name);
     if (value != null) {
       return value;
@@ -50,7 +50,7 @@ public abstract class AbstractNamedComponentRegistry<T> implements ResourceLocat
   /** Writes the value to the buffer */
   @Override
   public void encode(FriendlyByteBuf buffer, T value) {
-    buffer.writeResourceLocation(getKey(value));
+    buffer.writeIdentifier(getKey(value));
   }
 
   /** Writes the value to the buffer */
@@ -64,7 +64,7 @@ public abstract class AbstractNamedComponentRegistry<T> implements ResourceLocat
   }
 
   /** Reads the given value from the network by resource location */
-  private T decodeInternal(ResourceLocation name) {
+  private T decodeInternal(Identifier name) {
     T value = getValue(name);
     if (value == null) {
       throw new DecoderException(errorText + name);
@@ -75,7 +75,7 @@ public abstract class AbstractNamedComponentRegistry<T> implements ResourceLocat
   /** Parse the value from JSON */
   @Override
   public T decode(FriendlyByteBuf buffer, TypedMap context) {
-    return decodeInternal(buffer.readResourceLocation());
+    return decodeInternal(buffer.readIdentifier());
   }
 
   /** Parse the value from JSON */
@@ -86,7 +86,7 @@ public abstract class AbstractNamedComponentRegistry<T> implements ResourceLocat
     if (key.isEmpty()) {
       return null;
     }
-    return decodeInternal(new ResourceLocation(key));
+    return decodeInternal(Identifier.parse(key));
   }
 
 

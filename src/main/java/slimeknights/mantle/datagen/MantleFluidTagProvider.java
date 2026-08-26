@@ -4,7 +4,6 @@ import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.data.PackOutput;
 import net.minecraft.data.tags.FluidTagsProvider;
 import net.minecraft.world.level.material.Fluids;
-import net.minecraftforge.common.data.ExistingFileHelper;
 import org.jetbrains.annotations.ApiStatus.Internal;
 import slimeknights.mantle.Mantle;
 
@@ -20,8 +19,8 @@ import static slimeknights.mantle.datagen.MantleTags.Fluids.WATER;
 /** Provider for tags added by mantle, generally not useful for other mods */
 @Internal
 public class MantleFluidTagProvider extends FluidTagsProvider {
-  public MantleFluidTagProvider(PackOutput output, CompletableFuture<Provider> holders, ExistingFileHelper existingFileHelper) {
-    super(output, holders,  Mantle.modId, existingFileHelper);
+  public MantleFluidTagProvider(PackOutput output, CompletableFuture<Provider> holders) {
+    super(output, holders, Mantle.modId);
   }
 
   @Override
@@ -29,9 +28,9 @@ public class MantleFluidTagProvider extends FluidTagsProvider {
     this.tag(WATER).add(Fluids.WATER, Fluids.FLOWING_WATER);
     this.tag(LAVA).add(Fluids.LAVA, Fluids.FLOWING_LAVA);
     this.tag(SOUP)
-      .addOptionalTag(BEETROOT_SOUP.location())
-      .addOptionalTag(MUSHROOM_STEW.location())
-      .addOptionalTag(RABBIT_STEW.location());
+      .addOptionalTag(BEETROOT_SOUP)
+      .addOptionalTag(MUSHROOM_STEW)
+      .addOptionalTag(RABBIT_STEW);
   }
 
   @Override

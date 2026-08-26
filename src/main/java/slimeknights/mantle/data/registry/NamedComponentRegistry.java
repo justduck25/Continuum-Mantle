@@ -2,7 +2,7 @@ package slimeknights.mantle.data.registry;
 
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 import javax.annotation.Nullable;
 import java.util.Collection;
@@ -13,13 +13,13 @@ import java.util.Collection;
  */
 public class NamedComponentRegistry<T> extends AbstractNamedComponentRegistry<T> {
   /** Registered box expansion types */
-  private final BiMap<ResourceLocation,T> values = HashBiMap.create();
+  private final BiMap<Identifier,T> values = HashBiMap.create();
   public NamedComponentRegistry(String errorText) {
     super(errorText);
   }
 
   /** Registers the value with the given name */
-  public synchronized <V extends T> V register(ResourceLocation name, V value) {
+  public synchronized <V extends T> V register(Identifier name, V value) {
     if (values.putIfAbsent(name, value) != null) {
       throw new IllegalArgumentException("Duplicate registration " + name);
     }
@@ -28,19 +28,19 @@ public class NamedComponentRegistry<T> extends AbstractNamedComponentRegistry<T>
 
   @Override
   @Nullable
-  public T getValue(ResourceLocation name) {
+  public T getValue(Identifier name) {
     return values.get(name);
   }
 
   /** Gets the key associated with a value */
   @Nullable
-  public ResourceLocation getOptionalKey(T value) {
+  public Identifier getOptionalKey(T value) {
     return values.inverse().get(value);
   }
 
   @Override
-  public ResourceLocation getKey(T value) {
-    ResourceLocation key = getOptionalKey(value);
+  public Identifier getKey(T value) {
+    Identifier key = getOptionalKey(value);
     if (key == null) {
       throw new IllegalStateException(errorText + value);
     }
@@ -48,7 +48,7 @@ public class NamedComponentRegistry<T> extends AbstractNamedComponentRegistry<T>
   }
 
   @Override
-  public Collection<ResourceLocation> getKeys() {
+  public Collection<Identifier> getKeys() {
     return values.keySet();
   }
 

@@ -1,15 +1,18 @@
 package slimeknights.mantle.client.book;
 
+import net.neoforged.neoforge.client.network.ClientPacketDistributor;
+
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import net.minecraft.core.BlockPos;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.server.packs.resources.ResourceManagerReloadListener;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.common.crafting.conditions.ICondition;
+import net.neoforged.neoforge.common.conditions.ICondition;
 import slimeknights.mantle.Mantle;
 import slimeknights.mantle.client.book.action.StringActionProcessor;
 import slimeknights.mantle.client.book.action.protocol.ProtocolGoToPage;
@@ -31,13 +34,13 @@ import slimeknights.mantle.client.book.data.content.ContentTextLeftImage;
 import slimeknights.mantle.client.book.data.content.ContentTextRightImage;
 import slimeknights.mantle.client.book.data.content.PageContent;
 import slimeknights.mantle.client.book.data.deserializer.ConditionDeserializer;
+import slimeknights.mantle.client.book.data.deserializer.ComponentDeserializer;
 import slimeknights.mantle.client.book.data.deserializer.HexStringDeserializer;
 import slimeknights.mantle.client.book.data.element.IngredientData;
 import slimeknights.mantle.client.book.repository.BookRepository;
 import slimeknights.mantle.client.book.transformer.BookTransformer;
 import slimeknights.mantle.client.book.transformer.IndexTransformer;
-import slimeknights.mantle.data.gson.ResourceLocationSerializer;
-import slimeknights.mantle.network.MantleNetwork;
+import slimeknights.mantle.data.gson.IdentifierSerializer;
 import slimeknights.mantle.network.packet.UpdateHeldPagePacket;
 import slimeknights.mantle.network.packet.UpdateInventoryPagePacket;
 import slimeknights.mantle.network.packet.UpdateLecternPagePacket;
@@ -59,12 +62,12 @@ public class BookLoader implements ResourceManagerReloadListener {
   /**
    * Maps page content presets to names
    */
-  private static final HashMap<ResourceLocation, Class<? extends PageContent>> typeToContentMap = new HashMap<>();
+  private static final HashMap<Identifier, Class<? extends PageContent>> typeToContentMap = new HashMap<>();
 
   /**
    * Internal registry of all books for the purposes of the reloader, maps books to name
    */
-  private static final HashMap<ResourceLocation, BookData> books = new HashMap<>();
+  private static final HashMap<Identifier, BookData> books = new HashMap<>();
 
   public BookLoader() {
     // Register page types
@@ -81,16 +84,17 @@ public class BookLoader implements ResourceManagerReloadListener {
     registerPageType(ContentSmelting.ID, ContentSmelting.class);
     registerPageType(ContentSmithing.ID, ContentSmithing.class);
     registerPageType(ContentBlockInteraction.ID, ContentBlockInteraction.class);
-    registerPageType(ContentStructure.ID, ContentStructure.class);
     registerPageType(ContentIndex.ID, ContentIndex.class);
     registerPageType(ContentShowcase.ID, ContentShowcase.class);
+    registerPageType(ContentStructure.ID, ContentStructure.class);
 
     // Register action protocols
     StringActionProcessor.registerProtocol(Mantle.getResource("go-to-page"), new ProtocolGoToPage(false));
     StringActionProcessor.registerProtocol(Mantle.getResource("go-to-page-rtn"), new ProtocolGoToPage(true));
 
     // Register GSON type adapters
-    registerGsonTypeAdapter(ResourceLocation.class, ResourceLocationSerializer.resourceLocation("mantle"));
+    registerGsonTypeAdapter(Identifier.class, IdentifierSerializer.resourceLocation("mantle"));
+    registerGsonTypeAdapter(Component.class, new ComponentDeserializer());
     registerGsonTypeAdapter(int.class, new HexStringDeserializer());
     registerGsonTypeAdapter(ICondition.class, new ConditionDeserializer());
     registerGsonTypeAdapter(IngredientData.class, new IngredientData.Deserializer());
@@ -109,7 +113,7 @@ public class BookLoader implements ResourceManagerReloadListener {
    * @param clazz The PageContent class for this page type
    * @RecommendedInvoke init
    */
-  public static void registerPageType(ResourceLocation id, Class<? extends PageContent> clazz) {
+  public static void registerPageType(Identifier id, Class<? extends PageContent> clazz) {
     if (typeToContentMap.containsKey(id)) {
       throw new IllegalArgumentException("Page type " + id + " already in use.");
     }
@@ -124,7 +128,7 @@ public class BookLoader implements ResourceManagerReloadListener {
    * @return The class of the page type, ContentError.class if page type not registered
    */
   @Nullable
-  public static Class<? extends PageContent> getPageType(ResourceLocation name) {
+  public static Class<? extends PageContent> getPageType(Identifier name) {
     return typeToContentMap.get(name);
   }
 
@@ -136,7 +140,7 @@ public class BookLoader implements ResourceManagerReloadListener {
    * @param repositories All the repositories the book will load the sections from
    * @return The book object, not immediately populated
    */
-  public static BookData registerBook(ResourceLocation id, BookRepository... repositories) {
+  public static BookData registerBook(Identifier id, BookRepository... repositories) {
     return registerBook(id, true, true, repositories);
   }
 
@@ -150,7 +154,7 @@ public class BookLoader implements ResourceManagerReloadListener {
    * @param repositories       All the repositories the book will load the sections from
    * @return The book object, not immediately populated
    */
-  public static BookData registerBook(ResourceLocation id, boolean appendIndex, boolean appendContentTable, BookRepository... repositories) {
+  public static BookData registerBook(Identifier id, boolean appendIndex, boolean appendContentTable, BookRepository... repositories) {
     BookData info = new BookData(repositories);
 
     if (appendIndex) {
@@ -170,18 +174,18 @@ public class BookLoader implements ResourceManagerReloadListener {
    * @return The book object, or null if it doesn't exist
    */
   @Nullable
-  public static BookData getBook(ResourceLocation id) {
+  public static BookData getBook(Identifier id) {
     return books.getOrDefault(id, null);
   }
 
   /** @deprecated use {@link #getAllBooks()} */
   @Deprecated(forRemoval = true)
-  public static Iterable<ResourceLocation> getRegisteredBooks() {
+  public static Iterable<Identifier> getRegisteredBooks() {
     return books.keySet();
   }
 
   /** Gets the resource locations of all registered books */
-  public static Collection<ResourceLocation> getAllBooks() {
+  public static Collection<Identifier> getAllBooks() {
     return books.keySet();
   }
 
@@ -196,7 +200,7 @@ public class BookLoader implements ResourceManagerReloadListener {
       ItemStack item = player.getItemInHand(hand);
       if (!item.isEmpty()) {
         BookHelper.writeSavedPageToBook(item, page);
-        MantleNetwork.INSTANCE.network.sendToServer(new UpdateHeldPagePacket(hand, page));
+        ClientPacketDistributor.sendToServer(new UpdateHeldPagePacket(hand, page));
       }
     }
   }
@@ -212,7 +216,7 @@ public class BookLoader implements ResourceManagerReloadListener {
       ItemStack item = player.getInventory().getItem(slot);
       if (!item.isEmpty()) {
         BookHelper.writeSavedPageToBook(item, page);
-        MantleNetwork.INSTANCE.network.sendToServer(new UpdateInventoryPagePacket(slot, page));
+        ClientPacketDistributor.sendToServer(new UpdateInventoryPagePacket(slot, page));
       }
     }
   }
@@ -223,7 +227,7 @@ public class BookLoader implements ResourceManagerReloadListener {
    * @param page    New page
    */
   public static void updateSavedPage(BlockPos pos, String page) {
-    MantleNetwork.INSTANCE.network.sendToServer(new UpdateLecternPagePacket(pos, page));
+    ClientPacketDistributor.sendToServer(new UpdateLecternPagePacket(pos, page));
   }
 
   public static Gson getGson() {

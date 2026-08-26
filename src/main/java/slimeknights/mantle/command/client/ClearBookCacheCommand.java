@@ -5,8 +5,9 @@ import com.mojang.brigadier.context.CommandContext;
 import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
-import net.minecraft.commands.arguments.ResourceLocationArgument;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.commands.arguments.IdentifierArgument;
+import net.minecraft.resources.Identifier;
+import slimeknights.mantle.Mantle;
 import slimeknights.mantle.client.book.BookLoader;
 import slimeknights.mantle.client.book.data.BookData;
 
@@ -20,7 +21,7 @@ public class ClearBookCacheCommand {
    */
   public static void register(LiteralArgumentBuilder<CommandSourceStack> subCommand) {
     subCommand.requires(source -> source.getEntity() instanceof AbstractClientPlayer)
-              .then(Commands.argument("id", ResourceLocationArgument.id()).suggests(MantleClientCommand.REGISTERED_BOOKS)
+              .then(Commands.argument("id", IdentifierArgument.id()).suggests(MantleClientCommand.REGISTERED_BOOKS)
                             .executes(ClearBookCacheCommand::runBook))
               .executes(ClearBookCacheCommand::runAll);
   }
@@ -31,7 +32,7 @@ public class ClearBookCacheCommand {
    * @return  Integer return
    */
   private static int runBook(CommandContext<CommandSourceStack> context) {
-    ResourceLocation book = ResourceLocationArgument.getId(context, "id");
+    Identifier book = IdentifierArgument.getId(context, "id");
     clearBookCache(book);
     return 0;
   }
@@ -46,13 +47,13 @@ public class ClearBookCacheCommand {
     return 0;
   }
 
-  private static void clearBookCache(@Nullable ResourceLocation book) {
+  private static void clearBookCache(@Nullable Identifier book) {
     if (book != null) {
       BookData bookData = BookLoader.getBook(book);
       if (bookData != null) {
         bookData.reset();
       } else {
-        BookCommand.bookNotFound(book);
+        Mantle.logger.error("Book {} not found", book);
       }
     } else {
       BookLoader.resetAllBooks();

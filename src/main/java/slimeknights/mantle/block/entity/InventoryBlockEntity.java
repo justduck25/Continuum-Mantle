@@ -1,13 +1,19 @@
 package slimeknights.mantle.block.entity;
 
+import com.mojang.serialization.Dynamic;
+
 import lombok.Getter;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.NonNullList;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.NbtOps;
 import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.RegistryOps;
+import net.minecraft.core.RegistryAccess;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.Container;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.Nameable;
@@ -16,11 +22,10 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraftforge.common.capabilities.Capability;
-import net.minecraftforge.common.capabilities.ForgeCapabilities;
-import net.minecraftforge.common.util.LazyOptional;
-import net.minecraftforge.items.IItemHandlerModifiable;
-import net.minecraftforge.items.wrapper.InvWrapper;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
+import net.neoforged.neoforge.items.IItemHandlerModifiable;
+import net.neoforged.neoforge.items.wrapper.InvWrapper;
 import slimeknights.mantle.util.ItemStackList;
 
 import javax.annotation.Nonnull;
@@ -38,7 +43,6 @@ public abstract class InventoryBlockEntity extends NameableBlockEntity implement
   protected int stackSizeLimit;
   @Getter
   protected IItemHandlerModifiable itemHandler;
-  protected LazyOptional<IItemHandlerModifiable> itemHandlerCap;
 
   /**
    * @param name Localization String for the inventory title. Can be overridden through setCustomName
@@ -56,22 +60,6 @@ public abstract class InventoryBlockEntity extends NameableBlockEntity implement
     this.inventory = NonNullList.withSize(inventorySize, ItemStack.EMPTY);
     this.stackSizeLimit = maxStackSize;
     this.itemHandler = new InvWrapper(this);
-    this.itemHandlerCap = LazyOptional.of(() -> this.itemHandler);
-  }
-
-  @Nonnull
-  @Override
-  public <T> LazyOptional<T> getCapability(Capability<T> capability, @Nullable Direction facing) {
-    if (capability == ForgeCapabilities.ITEM_HANDLER) {
-      return this.itemHandlerCap.cast();
-    }
-    return super.getCapability(capability, facing);
-  }
-
-  @Override
-  public void invalidateCaps() {
-    super.invalidateCaps();
-    this.itemHandlerCap.invalidate();
   }
 
   /* Inventory management */
@@ -200,22 +188,18 @@ public abstract class InventoryBlockEntity extends NameableBlockEntity implement
 
     return entityplayer.distanceToSqr(this.worldPosition.getX() + 0.5D, this.worldPosition.getY() + 0.5D, this.worldPosition.getZ() + 0.5D) <= 64D;
   }
-
-  @Override
   public void startOpen(Player player) {}
-
-  @Override
   public void stopOpen(Player player) {}
 
   /* NBT */
 
   @Override
-  public void load(CompoundTag tags) {
-    super.load(tags);
+  protected void loadAdditional(ValueInput input) {
+    super.loadAdditional(input);
     if (saveSizeToNBT) {
-      this.resizeInternal(tags.getInt(TAG_INVENTORY_SIZE));
+      this.resizeInternal(input.getIntOr(TAG_INVENTORY_SIZE, this.inventory.size()));
     }
-    this.readInventoryFromNBT(tags);
+    this.readInventoryFromInput(input);
   }
 
   @Override
@@ -226,11 +210,14 @@ public abstract class InventoryBlockEntity extends NameableBlockEntity implement
       tags.putInt(TAG_INVENTORY_SIZE, this.inventory.size());
     }
   }
-  
+
   @Override
-  public void saveAdditional(CompoundTag tags) {
-    super.saveAdditional(tags);
-    this.writeInventoryToNBT(tags);
+  public void saveAdditional(ValueOutput output) {
+    super.saveAdditional(output);
+    if (saveSizeToNBT) {
+      output.putInt(TAG_INVENTORY_SIZE, this.inventory.size());
+    }
+    this.writeInventoryToOutput(output);
   }
 
   /**
@@ -244,7 +231,8 @@ public abstract class InventoryBlockEntity extends NameableBlockEntity implement
       if (!inventory.getItem(i).isEmpty()) {
         CompoundTag itemTag = new CompoundTag();
         itemTag.putByte(TAG_SLOT, (byte) i);
-        inventory.getItem(i).save(itemTag);
+        CompoundTag stackTag = ItemStack.OPTIONAL_CODEC.encodeStart(RegistryOps.create(NbtOps.INSTANCE, RegistryAccess.fromRegistryOfRegistries(BuiltInRegistries.REGISTRY)), inventory.getItem(i)).getOrThrow(IllegalStateException::new).asCompound().orElseGet(CompoundTag::new);
+        itemTag.put("Stack", stackTag);
         nbttaglist.add(itemTag);
       }
     }
@@ -256,15 +244,17 @@ public abstract class InventoryBlockEntity extends NameableBlockEntity implement
    * Reads an inventory from the tag. Overwrites current content
    */
   public void readInventoryFromNBT(CompoundTag tag) {
-    ListTag list = tag.getList(TAG_ITEMS, Tag.TAG_COMPOUND);
+    this.inventory.replaceAll(ignored -> ItemStack.EMPTY);
+    ListTag list = tag.getListOrEmpty(TAG_ITEMS);
 
     int limit = this.getMaxStackSize();
     ItemStack stack;
     for (int i = 0; i < list.size(); ++i) {
-      CompoundTag itemTag = list.getCompound(i);
-      int slot = itemTag.getByte(TAG_SLOT) & 255;
+      CompoundTag itemTag = list.getCompoundOrEmpty(i);
+      int slot = itemTag.getByteOr(TAG_SLOT, (byte)0) & 255;
       if (slot < this.inventory.size()) {
-        stack = ItemStack.of(itemTag);
+        CompoundTag stackTag = itemTag.getCompound("Stack").orElse(itemTag);
+        stack = ItemStack.OPTIONAL_CODEC.parse(new Dynamic<>(RegistryOps.create(NbtOps.INSTANCE, RegistryAccess.fromRegistryOfRegistries(BuiltInRegistries.REGISTRY)), stackTag)).getOrThrow(IllegalStateException::new);
         if (!stack.isEmpty() && stack.getCount() > limit) {
           stack.setCount(limit);
         }
@@ -273,6 +263,35 @@ public abstract class InventoryBlockEntity extends NameableBlockEntity implement
     }
   }
 
+
+  /** Writes the contents of the inventory using the Minecraft 26 value output API. */
+  protected void writeInventoryToOutput(ValueOutput output) {
+    ValueOutput.ValueOutputList list = output.childrenList(TAG_ITEMS);
+    for (int i = 0; i < this.inventory.size(); i++) {
+      ItemStack stack = this.inventory.get(i);
+      if (!stack.isEmpty()) {
+        ValueOutput child = list.addChild();
+        child.putByte(TAG_SLOT, (byte)i);
+        child.store("Stack", ItemStack.OPTIONAL_CODEC, stack);
+      }
+    }
+  }
+
+  /** Reads the contents of the inventory using the Minecraft 26 value input API. */
+  protected void readInventoryFromInput(ValueInput input) {
+    this.inventory.replaceAll(ignored -> ItemStack.EMPTY);
+    int limit = this.getMaxStackSize();
+    for (ValueInput child : input.childrenListOrEmpty(TAG_ITEMS)) {
+      int slot = child.getByteOr(TAG_SLOT, (byte)0) & 255;
+      if (slot < this.inventory.size()) {
+        ItemStack stack = child.read("Stack", ItemStack.OPTIONAL_CODEC).orElse(ItemStack.EMPTY);
+        if (!stack.isEmpty() && stack.getCount() > limit) {
+          stack.setCount(limit);
+        }
+        this.inventory.set(slot, stack);
+      }
+    }
+  }
   @Override
   public boolean isEmpty() {
     for (ItemStack itemstack : this.inventory) {

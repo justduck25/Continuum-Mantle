@@ -1,8 +1,8 @@
 package slimeknights.mantle.client.screen;
 
 import com.google.common.collect.Lists;
-import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
 
 import java.util.List;
@@ -10,7 +10,7 @@ import java.util.List;
 @SuppressWarnings("unused")
 public class TabsWidget extends Widget {
 
-  private static final ResourceLocation creativeInventoryTabs = new ResourceLocation("textures/gui/container/creative_inventory/tabs.png");
+  private static final Identifier creativeInventoryTabs = Identifier.withDefaultNamespace("textures/gui/container/creative_inventory/tabs.png");
 
   private final ElementScreen[] tabActive = new ElementScreen[3];
   private final ElementScreen[] tab = new ElementScreen[3];
@@ -110,7 +110,7 @@ public class TabsWidget extends Widget {
   }
 
   @Override
-  public void draw(GuiGraphics graphics) {
+  public void draw(GuiGraphicsExtractor graphics) {
     int y = this.yPos + this.yOffset;
     for (int i = 0; i < this.icons.size(); i++) {
       int x = this.xPos + i * this.tab[0].w;
@@ -141,7 +141,7 @@ public class TabsWidget extends Widget {
 
       ItemStack icon = this.icons.get(i);
       if (icon != null) {
-        graphics.renderItem(icon, x + (actualTab.w - 16) / 2, y + (actualTab.h - 16) / 2);
+        graphics.item(icon, x + (actualTab.w - 16) / 2, y + (actualTab.h - 16) / 2);
       }
     }
   }

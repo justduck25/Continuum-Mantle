@@ -1,18 +1,16 @@
 {
-  "type": "mantle:empty_item",
-  "conditions": [
+  "neoforge:conditions": [
     {
       "type": "mantle:tag_filled",
       "registry": "minecraft:fluid",
-      "tag": "forge:mushroom_stew"
+      "tag": "c:mushroom_stew"
     }
   ],
+  "type": "mantle:empty_item",
   "fluid": {
     "amount": 250,
-    "tag": "forge:mushroom_stew"
+    "tag": "c:mushroom_stew"
   },
-  "input": {
-    "item": "minecraft:mushroom_stew"
-  },
+  "input": "minecraft:mushroom_stew",
   "result": "minecraft:bowl"
 }

@@ -3,7 +3,7 @@ package slimeknights.mantle.client.book.transformer;
 import com.google.common.collect.Lists;
 import lombok.Getter;
 import net.minecraft.ChatFormatting;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import slimeknights.mantle.Mantle;
 import slimeknights.mantle.client.book.data.BookData;
 import slimeknights.mantle.client.book.data.PageData;
@@ -21,7 +21,7 @@ import java.util.List;
  * Extended version of {@link ContentListingSectionTransformer} which supports putting entries in subgroups
  */
 public class ContentGroupingSectionTransformer extends SectionTransformer {
-  private static final ResourceLocation INDEX_EXTRA_DATA = Mantle.getResource("index");
+  private static final Identifier INDEX_EXTRA_DATA = Mantle.getResource("index");
 
   private final Boolean largeTitle;
   private final Boolean centerTitle;

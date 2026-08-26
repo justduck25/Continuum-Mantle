@@ -1,9 +1,8 @@
 package slimeknights.mantle.client.screen.book.element;
 
-import com.mojang.blaze3d.vertex.PoseStack;
-import net.minecraft.Util;
+import net.minecraft.util.Util;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.core.NonNullList;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.Mth;
@@ -11,8 +10,8 @@ import net.minecraft.util.StringUtil;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
-import net.minecraftforge.client.extensions.common.IClientItemExtensions;
-import net.minecraftforge.client.extensions.common.IClientItemExtensions.FontContext;
+import net.neoforged.neoforge.client.extensions.common.IClientItemExtensions;
+import net.neoforged.neoforge.client.extensions.common.IClientItemExtensions.FontContext;
 import slimeknights.mantle.client.book.action.StringActionProcessor;
 
 import javax.annotation.Nullable;
@@ -81,7 +80,7 @@ public class ItemElement extends SizedBookElement {
   }
 
   @Override
-  public void draw(GuiGraphics graphics, int mouseX, int mouseY, float partialTicks, Font fontRenderer) {
+  public void draw(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTicks, Font fontRenderer) {
     long nano = Util.getNanos();
 
     // don't cycle items during export
@@ -101,23 +100,23 @@ public class ItemElement extends SizedBookElement {
     if (this.currentItem < this.itemCycle.size()) {
       // Lighting.turnBackOn(); TODO: still needed?
 
-      PoseStack matrices = graphics.pose();
-      matrices.pushPose();
-      matrices.translate(x, y, 0);
-      matrices.scale(scale, scale, 1.0F);
+      var matrices = graphics.pose();
+      matrices.pushMatrix();
+      matrices.translate(x, y);
+      matrices.scale(scale, scale);
 
       ItemStack stack = this.itemCycle.get(this.currentItem);
-      graphics.renderItem(stack, 0, 0);
+      graphics.item(stack, 0, 0);
       Font font = IClientItemExtensions.of(stack).getFont(stack, FontContext.TOOLTIP);
       if (font == null) font = mc.font;
-      graphics.renderItemDecorations(font, stack, 0, 0);
+      graphics.itemDecorations(font, stack, 0, 0);
 
-      matrices.popPose();
+      matrices.popMatrix();
     }
   }
 
   @Override
-  public void drawOverlay(GuiGraphics graphics, int mouseX, int mouseY, float partialTicks, Font fontRenderer) {
+  public void drawOverlay(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTicks, Font fontRenderer) {
     if (this.isHovered(mouseX, mouseY) && this.currentItem < this.itemCycle.size()) {
       if (this.tooltip != null) {
         this.drawTooltip(graphics, this.tooltip, mouseX, mouseY, fontRenderer);

@@ -9,7 +9,7 @@ import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.resources.Resource;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.tags.TagFile;
@@ -41,7 +41,7 @@ public class DumpTagCommand {
    * @param subCommand  Command builder
    */
   public static void register(LiteralArgumentBuilder<CommandSourceStack> subCommand) {
-    subCommand.requires(sender -> sender.hasPermission(MantleCommand.PERMISSION_EDIT_SPAWN))
+    subCommand.requires(sender -> MantleCommand.hasPermission(sender, MantleCommand.PERMISSION_EDIT_SPAWN))
       .then(Action.LOG.build())
       .then(Action.SAVE.build())
       .then(Action.SOURCES.build());
@@ -70,7 +70,7 @@ public class DumpTagCommand {
   }
 
   /** Parses a tag from the resource list */
-  public static void parseTag(List<Resource> resources, List<TagLoader.EntryWithSource> list, ResourceLocation regName, ResourceLocation tagName, ResourceLocation path) {
+  public static void parseTag(List<Resource> resources, List<TagLoader.EntryWithSource> list, Identifier regName, Identifier tagName, Identifier path) {
     for (Resource resource : resources) {
       String packId = resource.sourcePackId();
       try (Reader reader = resource.openAsReader()) {
@@ -118,11 +118,11 @@ public class DumpTagCommand {
    * @throws CommandSyntaxException  If invalid values are passed
    */
   private static <T> int runGeneric(CommandContext<CommandSourceStack> context, TagSource<T> registry, Action action) throws CommandSyntaxException {
-    ResourceLocation regName = registry.key().location();
-    ResourceLocation name = context.getArgument("name", ResourceLocation.class);
+    Identifier regName = registry.key().identifier();
+    Identifier name = context.getArgument("name", Identifier.class);
     ResourceManager manager = context.getSource().getServer().getResourceManager();
 
-    ResourceLocation path = new ResourceLocation(name.getNamespace(), registry.folder() + "/" + name.getPath() + ".json");
+    Identifier path = Identifier.fromNamespaceAndPath(name.getNamespace(), registry.folder() + "/" + name.getPath() + ".json");
 
     // if the tag file does not exist, only error if the tag is unknown
     List<Resource> resources = manager.getResourceStack(path);

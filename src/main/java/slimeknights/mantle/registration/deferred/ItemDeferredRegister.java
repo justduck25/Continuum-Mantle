@@ -1,10 +1,14 @@
 package slimeknights.mantle.registration.deferred;
 
 import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.item.Item;
 import slimeknights.mantle.registration.object.EnumObject;
 import slimeknights.mantle.registration.object.ItemObject;
 
+import java.util.Collections;
+import java.util.IdentityHashMap;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -13,7 +17,40 @@ import java.util.function.Supplier;
  */
 @SuppressWarnings("unused")
 public class ItemDeferredRegister extends DeferredRegisterWrapper<Item> {
+  private static final ThreadLocal<ResourceKey<Item>> CURRENT_ITEM_KEY = new ThreadLocal<>();
+  private static final Set<Item.Properties> SHARED_PROPERTIES = Collections.synchronizedSet(Collections.newSetFromMap(new IdentityHashMap<>()));
 
+  /** Marks an old shared Item.Properties instance that needs its ID refreshed for every item supplier. */
+  public static Item.Properties registerSharedProperties(Item.Properties props) {
+    SHARED_PROPERTIES.add(props);
+    return props;
+  }
+
+  private static void setSharedIds(ResourceKey<Item> key) {
+    synchronized (SHARED_PROPERTIES) {
+      for (Item.Properties props : SHARED_PROPERTIES) {
+        props.setId(key);
+      }
+    }
+  }
+
+
+  /** Applies the currently registering item ID to item properties created inside an item supplier. */
+  public static Item.Properties setIdFromCurrentKey(Item.Properties props) {
+    ResourceKey<Item> key = CURRENT_ITEM_KEY.get();
+    return key == null ? props : props.setId(key);
+  }
+
+  /** Runs an item supplier while exposing the item key for property helpers. */
+  public static <I extends Item> I withCurrentItemKey(ResourceKey<Item> key, Supplier<? extends I> supplier) {
+    CURRENT_ITEM_KEY.set(key);
+    setSharedIds(key);
+    try {
+      return supplier.get();
+    } finally {
+      CURRENT_ITEM_KEY.remove();
+    }
+  }
   public ItemDeferredRegister(String modID) {
     super(Registries.ITEM, modID);
   }
@@ -25,7 +62,8 @@ public class ItemDeferredRegister extends DeferredRegisterWrapper<Item> {
    * @return  Item registry object
    */
   public <I extends Item> ItemObject<I> register(String name, Supplier<? extends I> sup) {
-    return new ItemObject<>(register.register(name, sup));
+    ResourceKey<Item> key = ResourceKey.create(Registries.ITEM, resource(name));
+    return new ItemObject<>(register.register(name, () -> withCurrentItemKey(key, sup)));
   }
 
   /**
@@ -35,7 +73,7 @@ public class ItemDeferredRegister extends DeferredRegisterWrapper<Item> {
    * @return  Item registry object
    */
   public ItemObject<Item> register(String name, Item.Properties props) {
-    return register(name, () -> new Item(props));
+    return register(name, () -> new Item(setIdFromCurrentKey(props)));
   }
 
   /**

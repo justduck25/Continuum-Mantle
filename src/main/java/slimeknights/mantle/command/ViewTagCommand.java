@@ -7,7 +7,7 @@ import com.mojang.brigadier.exceptions.Dynamic2CommandExceptionType;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import slimeknights.mantle.command.argument.TagSource;
 import slimeknights.mantle.command.argument.TagSourceArgument;
 
@@ -41,24 +41,24 @@ public class ViewTagCommand {
    * @throws CommandSyntaxException  If invalid values are passed
    */
   private static <T> int runGeneric(CommandContext<CommandSourceStack> context, TagSource<T> registry) throws CommandSyntaxException {
-    ResourceLocation name = context.getArgument("name", ResourceLocation.class);
-    Collection<ResourceLocation> values = registry.keysInTag(name);
+    Identifier name = context.getArgument("name", Identifier.class);
+    Collection<Identifier> values = registry.keysInTag(name);
     if (values != null) {
       // start building output message
-      MutableComponent output = Component.translatable("command.mantle.view_tag.success", registry.key().location(), name);
+      MutableComponent output = Component.translatable("command.mantle.view_tag.success", registry.key().identifier(), name);
 
       // if no values, print empty
       if (values.isEmpty()) {
         output.append("\n* ").append(EMPTY);
       } else {
-        for (ResourceLocation value : values) {
+        for (Identifier value : values) {
           output.append("\n* " + Objects.requireNonNull(value));
         }
       }
       context.getSource().sendSuccess(() -> output, true);
       return values.size();
     }
-    throw TAG_NOT_FOUND.create(registry.key().location(), name);
+    throw TAG_NOT_FOUND.create(registry.key().identifier(), name);
   }
 
   /**

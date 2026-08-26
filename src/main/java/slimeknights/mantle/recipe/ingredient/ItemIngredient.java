@@ -1,12 +1,16 @@
 package slimeknights.mantle.recipe.ingredient;
 
 import com.google.gson.JsonObject;
+import net.minecraft.core.Holder;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.ItemStackTemplate;
+import net.minecraft.world.item.crafting.display.SlotDisplay;
 import net.minecraft.world.level.ItemLike;
-import net.minecraftforge.common.crafting.AbstractIngredient;
+import net.neoforged.neoforge.common.crafting.ICustomIngredient;
 import slimeknights.mantle.data.loadable.Loadable;
 import slimeknights.mantle.data.loadable.Loadables;
 import slimeknights.mantle.data.loadable.array.ArrayLoadable;
@@ -19,44 +23,56 @@ import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
-/** Abstract ingredient that matches a list of items or a tag, mirroring the vanilla syntax */
-public abstract class ItemIngredient extends AbstractIngredient {
-  /** Field for the item tag */
+/** Abstract ingredient that matches a list of items or a tag, mirroring the vanilla syntax. */
+public abstract class ItemIngredient implements ICustomIngredient {
   protected static final LoadableField<TagKey<Item>,ItemIngredient> TAG_FIELD = new UnsyncedField<>(Loadables.ITEM_TAG.nullableField("tag", i -> i.tag));
 
   protected final List<Item> items;
   @Nullable
   protected final TagKey<Item> tag;
 
-  /** Constructor letting you supply your own item stream */
-  protected ItemIngredient(List<Item> items, @Nullable TagKey<Item> tag, Stream<? extends Value> values) {
-    super(values);
+  protected ItemIngredient(List<Item> items, @Nullable TagKey<Item> tag) {
     this.items = items;
     this.tag = tag;
   }
 
-  /** Constructor using default stream of items */
-  protected ItemIngredient(List<Item> items, @Nullable TagKey<Item> tag) {
-    this(items, tag, Stream.concat(
-      items.stream().map(item -> new ItemValue(new ItemStack(item))),
-      Stream.ofNullable(tag).map(TagValue::new))
-    );
-  }
-
-  /** Maps the list to a list of items */
   protected static List<Item> toItem(List<ItemLike> items) {
     return items.stream().map(ItemLike::asItem).toList();
   }
 
   @Override
   public boolean test(@Nullable ItemStack stack) {
-    // super is going to do list iteration, but for tag checks it's way easier to just check directly
-    // also ensures we never match empty just because our lists are empty
     return stack != null && (items.contains(stack.getItem()) || tag != null && stack.is(tag));
   }
 
-  /** Custom field that syncs the item tag as items to the client */
+  @Override
+  public Stream<Holder<Item>> items() {
+    Stream<Holder<Item>> itemStream = items.stream().map(Item::builtInRegistryHolder);
+    if (tag != null) {
+      return Stream.concat(itemStream, StreamSupport.stream(BuiltInRegistries.ITEM.getTagOrEmpty(tag).spliterator(), false));
+    }
+    return itemStream;
+  }
+
+  public ItemStack[] getItems() {
+    return items().map(Holder::value).map(ItemStack::new).toArray(ItemStack[]::new);
+  }
+
+  @Override
+  public SlotDisplay display() {
+    return new SlotDisplay.Composite(Arrays.stream(getItems())
+      .filter(s -> !s.isEmpty())
+      .map(s -> (SlotDisplay) new SlotDisplay.ItemStackSlotDisplay(ItemStackTemplate.fromNonEmptyStack(s)))
+      .toList());
+  }
+
+  @Override
+  public boolean isSimple() {
+    return true;
+  }
+
   public enum ItemsField implements RecordField<List<Item>,ItemIngredient> {
     INSTANCE;
 
@@ -81,8 +97,7 @@ public abstract class ItemIngredient extends AbstractIngredient {
 
     @Override
     public void encode(FriendlyByteBuf buffer, ItemIngredient parent) {
-      // sync both tag and item values to client
-      ITEM_LIST.encode(buffer, Arrays.stream(parent.getItems()).map(ItemStack::getItem).toList());
+      ITEM_LIST.encode(buffer, parent.items().map(Holder::value).toList());
     }
   }
 }

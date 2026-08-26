@@ -4,29 +4,28 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
-import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.LevelReader;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.Mirror;
 import net.minecraft.world.level.block.Rotation;
-import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.level.ScheduledTickAccess;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
-import net.minecraftforge.common.capabilities.ForgeCapabilities;
-import net.minecraftforge.fluids.FluidStack;
-import net.minecraftforge.fluids.capability.IFluidHandler;
-import net.minecraftforge.fluids.capability.templates.EmptyFluidHandler;
+import net.neoforged.neoforge.fluids.FluidStack;
+import net.neoforged.neoforge.fluids.capability.IFluidHandler;
 import slimeknights.mantle.Mantle;
+import slimeknights.mantle.fluid.FluidTransferHelper;
 import slimeknights.mantle.util.TranslationHelper;
 
 import javax.annotation.Nullable;
@@ -68,22 +67,19 @@ public class GaugeBlock extends Block {
   @SuppressWarnings("deprecation")
   @Deprecated
   @Override
-  public InteractionResult use(BlockState state, Level world, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hit) {
+  protected InteractionResult useWithoutItem(BlockState state, Level world, BlockPos pos, Player player, BlockHitResult hit) {
     // display adjacent tank contents
     if (!world.isClientSide()) {
       Direction side = state.getValue(FACING);
-      BlockEntity te = world.getBlockEntity(pos.relative(side.getOpposite()));
-      if (te != null) {
-        IFluidHandler handler = te.getCapability(ForgeCapabilities.FLUID_HANDLER, side).orElse(EmptyFluidHandler.INSTANCE);
-        if (handler.getTanks() > 0) {
-          FluidStack fluid = handler.getFluidInTank(0);
-          if (fluid.isEmpty()) {
-            // show simple empty message if gauge amount is hidden
-            player.displayClientMessage(formatCapacity(handler.getTankCapacity(0)), true);
-          } else {
-            Component contents = Component.translatable(CONTENTS_FORMAT, COMMA_FORMAT.format(fluid.getAmount()), COMMA_FORMAT.format(handler.getTankCapacity(0)), fluid.getDisplayName());
-            player.displayClientMessage(Component.translatable(CONTENTS_KEY, contents), true);
-          }
+      IFluidHandler handler = FluidTransferHelper.getFluidHandler(world, pos.relative(side.getOpposite()), side);
+      if (handler != null && handler.getTanks() > 0) {
+        FluidStack fluid = handler.getFluidInTank(0);
+        if (fluid.isEmpty()) {
+          // show simple empty message if gauge amount is hidden
+          sendGaugeMessage(player, formatCapacity(handler.getTankCapacity(0)));
+        } else {
+          Component contents = Component.translatable(CONTENTS_FORMAT, COMMA_FORMAT.format(fluid.getAmount()), COMMA_FORMAT.format(handler.getTankCapacity(0)), fluid.getHoverName());
+          sendGaugeMessage(player, Component.translatable(CONTENTS_KEY, contents));
         }
       }
     }
@@ -91,6 +87,14 @@ public class GaugeBlock extends Block {
     return InteractionResult.SUCCESS;
   }
 
+  /** Sends the gauge readout, preferring the overlay channel for server players. */
+  private static void sendGaugeMessage(Player player, Component message) {
+    if (player instanceof ServerPlayer serverPlayer) {
+      serverPlayer.sendSystemMessage(message, true);
+    } else {
+      player.sendSystemMessage(message);
+    }
+  }
 
   /* Visuals */
 
@@ -106,8 +110,7 @@ public class GaugeBlock extends Block {
   @Override
   public boolean canSurvive(BlockState state, LevelReader world, BlockPos pos) {
     Direction direction = state.getValue(FACING);
-    BlockEntity te = world.getBlockEntity(pos.relative(direction.getOpposite()));
-    return te != null && te.getCapability(ForgeCapabilities.FLUID_HANDLER, direction).isPresent();
+    return world instanceof Level level && FluidTransferHelper.getFluidHandler(level, pos.relative(direction.getOpposite()), direction) != null;
   }
 
   @Override
@@ -130,7 +133,7 @@ public class GaugeBlock extends Block {
   @SuppressWarnings("deprecation")
   @Deprecated
   @Override
-  public BlockState updateShape(BlockState state, Direction facing, BlockState facingState, LevelAccessor worldIn, BlockPos currentPos, BlockPos facingPos) {
+  protected BlockState updateShape(BlockState state, LevelReader worldIn, ScheduledTickAccess ticks, BlockPos currentPos, Direction facing, BlockPos facingPos, BlockState facingState, RandomSource random) {
     return facing.getOpposite() == state.getValue(FACING) && !state.canSurvive(worldIn, currentPos) ? Blocks.AIR.defaultBlockState() : state;
   }
 

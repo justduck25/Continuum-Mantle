@@ -6,7 +6,7 @@ import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.core.Registry;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.tags.TagKey;
 import slimeknights.mantle.command.argument.TagSourceArgument;
 import slimeknights.mantle.recipe.helper.TagPreference;
@@ -21,7 +21,7 @@ public class TagPreferenceCommand {
    * @param subCommand  Command builder
    */
   public static void register(LiteralArgumentBuilder<CommandSourceStack> subCommand) {
-    subCommand.requires(sender -> sender.hasPermission(MantleCommand.PERMISSION_EDIT_SPAWN))
+    subCommand.requires(sender -> MantleCommand.hasPermission(sender, MantleCommand.PERMISSION_EDIT_SPAWN))
       .then(RegistryArgument.argument().then(TagSourceArgument.tagArgument("name").executes(TagPreferenceCommand::run)));
   }
 
@@ -43,14 +43,14 @@ public class TagPreferenceCommand {
    * @return  Integer return
    */
   private static <T> int runGeneric(CommandContext<CommandSourceStack> context, Registry<T> registry) {
-    ResourceLocation name = context.getArgument("name", ResourceLocation.class);
+    Identifier name = context.getArgument("name", Identifier.class);
     TagKey<T> tag = TagKey.create(registry.key(), name);
     T preference = TagPreference.getPreference(tag).orElse(null);
     if (preference == null) {
-      context.getSource().sendSuccess(() -> Component.translatable(EMPTY_TAG, registry.key().location(), name), true);
+      context.getSource().sendSuccess(() -> Component.translatable(EMPTY_TAG, registry.key().identifier(), name), true);
       return 0;
     } else {
-      context.getSource().sendSuccess(() -> Component.translatable(PREFERENCE, registry.key().location(), name, registry.getKey(preference)), true);
+      context.getSource().sendSuccess(() -> Component.translatable(PREFERENCE, registry.key().identifier(), name, registry.getKey(preference)), true);
       return 1;
     }
   }

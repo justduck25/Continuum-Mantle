@@ -5,25 +5,27 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonSyntaxException;
+import com.mojang.serialization.JsonOps;
 import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
+import net.minecraft.resources.FileToIdConverter;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.server.packs.resources.SimpleJsonResourceReloadListener;
-import net.minecraft.util.GsonHelper;
 import net.minecraft.util.profiling.ProfilerFiller;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.ItemLike;
-import net.minecraftforge.common.MinecraftForge;
-import net.minecraftforge.common.crafting.CraftingHelper;
-import net.minecraftforge.common.crafting.conditions.ICondition.IContext;
-import net.minecraftforge.event.AddReloadListenerEvent;
-import net.minecraftforge.event.OnDatapackSyncEvent;
-import net.minecraftforge.eventbus.api.EventPriority;
-import net.minecraftforge.fluids.FluidStack;
+import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.common.conditions.ICondition;
+import net.neoforged.neoforge.common.conditions.ICondition.IContext;
+import net.neoforged.neoforge.event.AddServerReloadListenersEvent;
+import net.neoforged.neoforge.event.OnDatapackSyncEvent;
+import net.neoforged.bus.api.EventPriority;
+import net.neoforged.neoforge.fluids.FluidStack;
+import slimeknights.mantle.Mantle;
 import slimeknights.mantle.data.gson.GenericRegisteredSerializer;
-import slimeknights.mantle.network.MantleNetwork;
+import slimeknights.mantle.network.NetworkWrapper;
 import slimeknights.mantle.util.JsonHelper;
 
 import javax.annotation.Nullable;
@@ -37,18 +39,25 @@ import java.util.function.Consumer;
 
 /** Logic for filling and emptying fluid containers that are not fluid handlers */
 @Log4j2
-public class FluidContainerTransferManager extends SimpleJsonResourceReloadListener {
+public class FluidContainerTransferManager extends SimpleJsonResourceReloadListener<JsonElement> {
   /** Map of all modifier types that are expected to load in data packs */
   public static final GenericRegisteredSerializer<IFluidContainerTransfer> TRANSFER_LOADERS = new GenericRegisteredSerializer<>();
   /** Folder for saving the logic */
   public static final String FOLDER = "mantle/fluid_transfer";
   /** GSON instance */
   public static final Gson GSON = (new GsonBuilder())
-    .registerTypeAdapter(ResourceLocation.class, new ResourceLocation.Serializer())
+    .registerTypeAdapter(Identifier.class, slimeknights.mantle.data.gson.IdentifierSerializer.resourceLocation(slimeknights.mantle.Mantle.modId))
     .registerTypeHierarchyAdapter(IFluidContainerTransfer.class, TRANSFER_LOADERS)
     .setPrettyPrinting()
     .disableHtmlEscaping()
     .create();
+  static {
+    TRANSFER_LOADERS.registerDeserializer(EmptyFluidContainerTransfer.ID, EmptyFluidContainerTransfer.DESERIALIZER);
+    TRANSFER_LOADERS.registerDeserializer(EmptyFluidWithNBTTransfer.ID, EmptyFluidWithNBTTransfer.DESERIALIZER);
+    TRANSFER_LOADERS.registerDeserializer(EmptyPotionTransfer.ID, (json, type, context) -> EmptyPotionTransfer.DESERIALIZER.deserialize(json.getAsJsonObject()));
+    TRANSFER_LOADERS.registerDeserializer(FillFluidContainerTransfer.ID, FillFluidContainerTransfer.DESERIALIZER);
+    TRANSFER_LOADERS.registerDeserializer(FillFluidWithNBTTransfer.ID, FillFluidWithNBTTransfer.DESERIALIZER);
+  }
   /** Singleton instance of the manager */
   public static final FluidContainerTransferManager INSTANCE = new FluidContainerTransferManager();
 
@@ -63,7 +72,7 @@ public class FluidContainerTransferManager extends SimpleJsonResourceReloadListe
   private IContext context = IContext.EMPTY;
 
   private FluidContainerTransferManager() {
-    super(GSON, FOLDER);
+    super(JsonHelper.JSON_ELEMENT_CODEC, FileToIdConverter.json(FOLDER));
   }
 
   /** Lazily initializes the set of container items */
@@ -81,18 +90,21 @@ public class FluidContainerTransferManager extends SimpleJsonResourceReloadListe
 
   /** For internal use only */
   public void init() {
-    MinecraftForge.EVENT_BUS.addListener(EventPriority.NORMAL, false, AddReloadListenerEvent.class, e -> {
-      e.addListener(this);
+    NeoForge.EVENT_BUS.addListener(EventPriority.NORMAL, false, AddServerReloadListenersEvent.class, e -> {
+      e.addListener(Mantle.getResource("fluid_container_transfer"), this);
       this.context = e.getConditionContext();
     });
-    MinecraftForge.EVENT_BUS.addListener(EventPriority.NORMAL, false, OnDatapackSyncEvent.class, e -> JsonHelper.syncPackets(e, MantleNetwork.INSTANCE, new FluidContainerTransferPacket(this.getContainerItems())));
+    NeoForge.EVENT_BUS.addListener(EventPriority.NORMAL, false, OnDatapackSyncEvent.class, e -> {
+      FluidContainerTransferPacket packet = new FluidContainerTransferPacket(this.getContainerItems());
+      e.getRelevantPlayers().forEach(player -> NetworkWrapper.sendTo(packet, player));
+    });
   }
 
   /** Loads transfer from JSON */
   @Nullable
-  private IFluidContainerTransfer loadFluidTransfer(ResourceLocation key, JsonObject json) {
+  private IFluidContainerTransfer loadFluidTransfer(Identifier key, JsonObject json) {
     try {
-      if (!json.has("conditions") || CraftingHelper.processConditions(GsonHelper.getAsJsonArray(json, "conditions"), context)) {
+      if (conditionsMatch(json)) {
         return GSON.fromJson(json, IFluidContainerTransfer.class);
       }
     } catch (JsonSyntaxException e) {
@@ -101,8 +113,19 @@ public class FluidContainerTransferManager extends SimpleJsonResourceReloadListe
     return null;
   }
 
+  /** Checks NeoForge 26 condition arrays on this transfer JSON. */
+  private boolean conditionsMatch(JsonObject json) {
+    JsonElement conditions = json.has("neoforge:conditions") ? json.get("neoforge:conditions") : json.get("conditions");
+    if (conditions == null) {
+      return true;
+    }
+    return ICondition.LIST_CODEC.parse(JsonOps.INSTANCE, conditions)
+      .getOrThrow(JsonSyntaxException::new)
+      .stream()
+      .allMatch(condition -> condition.test(context));
+  }
   @Override
-  protected void apply(Map<ResourceLocation,JsonElement> splashList, ResourceManager manager, ProfilerFiller profiler) {
+  protected void apply(Map<Identifier,JsonElement> splashList, ResourceManager manager, ProfilerFiller profiler) {
     long time = System.nanoTime();
     this.transfers = splashList.entrySet().stream()
                                .map(entry -> loadFluidTransfer(entry.getKey(), entry.getValue().getAsJsonObject()))

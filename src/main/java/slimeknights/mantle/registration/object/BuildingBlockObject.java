@@ -27,8 +27,8 @@ public class BuildingBlockObject extends ItemObject<Block> implements MultiObjec
    */
   public BuildingBlockObject(Block block, Block slab, Block stairs) {
     super(BuiltInRegistries.BLOCK, block);
-    this.slab = RegistrationHelper.getCastedHolder(BuiltInRegistries.BLOCK, slab);
-    this.stairs = RegistrationHelper.getCastedHolder(BuiltInRegistries.BLOCK, stairs);
+    this.slab = () -> (SlabBlock) slab;
+    this.stairs = () -> (StairBlock) stairs;
   }
 
   /**

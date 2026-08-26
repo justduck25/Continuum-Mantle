@@ -1,7 +1,7 @@
 package slimeknights.mantle.client.screen.book.element;
 
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
 import slimeknights.mantle.client.book.action.StringActionProcessor;
 import slimeknights.mantle.client.book.data.element.TextData;
@@ -33,12 +33,12 @@ public class TextElement extends SizedBookElement {
   }
 
   @Override
-  public void draw(GuiGraphics graphics, int mouseX, int mouseY, float partialTicks, Font fontRenderer) {
+  public void draw(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTicks, Font fontRenderer) {
     lastAction = TextDataRenderer.drawText(graphics, this.x, this.y, this.width, this.height, this.text, mouseX, mouseY, fontRenderer, this.tooltip);
   }
 
   @Override
-  public void drawOverlay(GuiGraphics graphics, int mouseX, int mouseY, float partialTicks, Font fontRenderer) {
+  public void drawOverlay(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTicks, Font fontRenderer) {
     if (!this.tooltip.isEmpty()) {
       drawTooltip(graphics, this.tooltip, mouseX, mouseY, fontRenderer);
       this.tooltip.clear();

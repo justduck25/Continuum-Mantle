@@ -1,9 +1,8 @@
 package slimeknights.mantle.client.screen.book.element;
 
-import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
 import slimeknights.mantle.client.book.data.SectionData;
 import slimeknights.mantle.client.screen.book.BookScreen;
@@ -42,22 +41,13 @@ public class SelectionElement extends SizedBookElement {
   }
 
   @Override
-  public void draw(GuiGraphics graphics, int mouseX, int mouseY, float partialTicks, Font fontRenderer) {
+  public void draw(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTicks, Font fontRenderer) {
     boolean unlocked = this.section.isUnlocked(this.parent.advancementCache);
     boolean hover = this.isHovered(mouseX, mouseY);
 
     if (hover) {
       graphics.fill(this.iconX, this.iconY, this.iconX + IMG_SIZE, this.iconY + IMG_SIZE, this.parent.book.appearance.hoverColor);
     }
-    if (unlocked) {
-      RenderSystem.setShaderColor(1F, 1F, 1F, hover ? 1F : 0.5F);
-    } else {
-      float r = ((this.parent.book.appearance.lockedSectionColor >> 16) & 0xff) / 255.F;
-      float g = ((this.parent.book.appearance.lockedSectionColor >> 8) & 0xff) / 255.F;
-      float b = (this.parent.book.appearance.lockedSectionColor & 0xff) / 255.F;
-      RenderSystem.setShaderColor(r, g, b, 0.75F);
-    }
-
     this.iconRenderer.draw(graphics, mouseX, mouseY, partialTicks, fontRenderer);
 
     if (this.parent.drawText && this.section.parent.appearance.drawSectionListText) {
@@ -69,13 +59,13 @@ public class SelectionElement extends SizedBookElement {
         int textW = fontRenderer.width(splitTitle[i]);
         int textX = this.x + WIDTH / 2 - textW / 2;
         int textY = this.y + HEIGHT - fontRenderer.lineHeight / 2 + fontRenderer.lineHeight * i;
-        graphics.drawString(fontRenderer, splitTitle[i], textX, textY, hover ? 0xFF000000 : 0x7F000000, false);
+        graphics.textRenderer().accept(textX, textY, net.minecraft.network.chat.Component.literal(splitTitle[i]));
       }
     }
   }
 
   @Override
-  public void drawOverlay(GuiGraphics graphics, int mouseX, int mouseY, float partialTicks, Font fontRenderer) {
+  public void drawOverlay(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTicks, Font fontRenderer) {
     if (this.section != null && this.isHovered(mouseX, mouseY)) {
       List<Component> text = new ArrayList<>();
 

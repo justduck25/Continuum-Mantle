@@ -3,7 +3,7 @@ package slimeknights.mantle.data.loadable.common;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import slimeknights.mantle.util.RegistryHelper;
 
 import java.util.Objects;
@@ -13,9 +13,9 @@ import java.util.Objects;
  * @see LazyRegistryLoadable
  */
 @SuppressWarnings("unused")  // API
-public record RegistryLoadable<T>(Registry<T> registry, ResourceLocation registryId) implements BaseRegistryLoadable<T> {
+public record RegistryLoadable<T>(Registry<T> registry, Identifier registryId) implements BaseRegistryLoadable<T> {
   public RegistryLoadable(ResourceKey<? extends Registry<T>> registryId) {
-    this(Objects.requireNonNull(RegistryHelper.getRegistry(registryId), "Unknown registry " + registryId.location()), registryId.location());
+    this(Objects.requireNonNull(RegistryHelper.getRegistry(registryId), "Unknown registry " + registryId.identifier()), registryId.identifier());
   }
 
   @SuppressWarnings("unchecked")

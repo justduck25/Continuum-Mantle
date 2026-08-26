@@ -2,10 +2,10 @@ package slimeknights.mantle.registration.deferred;
 
 import net.minecraft.core.Registry;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.util.StringRepresentable;
-import net.minecraftforge.eventbus.api.IEventBus;
-import net.minecraftforge.registries.DeferredRegister;
+import net.neoforged.bus.api.IEventBus;
+import net.neoforged.neoforge.registries.DeferredRegister;
 import slimeknights.mantle.registration.object.EnumObject;
 
 import java.util.Locale;
@@ -46,8 +46,8 @@ public abstract class DeferredRegisterWrapper<T> {
    * @param name  Name
    * @return  Resource location string
    */
-  protected ResourceLocation resource(String name) {
-    return new ResourceLocation(modID, name);
+  protected Identifier resource(String name) {
+    return Identifier.fromNamespaceAndPath(modID, name);
   }
 
   /**

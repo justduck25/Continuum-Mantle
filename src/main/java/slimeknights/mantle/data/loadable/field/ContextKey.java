@@ -1,9 +1,8 @@
 package slimeknights.mantle.data.loadable.field;
 
 import lombok.Getter;
-import lombok.RequiredArgsConstructor;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraftforge.common.crafting.conditions.ICondition.IContext;
+import net.minecraft.resources.Identifier;
+import net.neoforged.neoforge.common.conditions.ICondition.IContext;
 import slimeknights.mantle.data.loadable.ErrorFactory;
 import slimeknights.mantle.util.typed.TypedMap;
 import slimeknights.mantle.util.typed.TypedMap.Key;
@@ -15,10 +14,9 @@ import java.util.function.BiFunction;
  * Key for fetching properties from a loadable context. This key doubles as a record field for a required context key.
  * @param <T>  Field type
  */
-@RequiredArgsConstructor
 public class ContextKey<T> implements Key<T> {
   /** Context field representing the object's ID */
-  public static final ContextKey<ResourceLocation> ID = new ContextKey<>("id");
+  public static final ContextKey<Identifier> ID = new ContextKey<>("id");
   /** Key for adding debug info to log messages. Generally not useful as a field */
   public static final ContextKey<String> DEBUG = new ContextKey<>("debug info");
   /** Key for adding condition context, used in {@link slimeknights.mantle.data.loadable.mapping.ConditionalLoadable} */
@@ -27,6 +25,10 @@ public class ContextKey<T> implements Key<T> {
   /** Name of the field, used primarily for debug */
   @Getter
   private final String name;
+
+  public ContextKey(String name) {
+    this.name = name;
+  }
 
 
 

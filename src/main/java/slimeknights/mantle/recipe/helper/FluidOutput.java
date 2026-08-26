@@ -3,11 +3,16 @@ package slimeknights.mantle.recipe.helper;
 import com.google.gson.JsonObject;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+import net.minecraft.core.Holder;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.core.component.DataComponentMap;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.world.item.component.CustomData;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.level.material.Fluid;
-import net.minecraftforge.fluids.FluidStack;
+import net.neoforged.neoforge.fluids.FluidStack;
 import slimeknights.mantle.data.loadable.Loadables;
 import slimeknights.mantle.data.loadable.common.FluidStackLoadable;
 import slimeknights.mantle.data.loadable.common.NBTLoadable;
@@ -122,7 +127,11 @@ public abstract class FluidOutput implements Supplier<FluidStack> {
    * @param buffer  Packet buffer instance
    */
   public void write(FriendlyByteBuf buffer) {
-    buffer.writeFluidStack(get());
+    if (buffer instanceof RegistryFriendlyByteBuf registryBuffer) {
+      FluidStack.OPTIONAL_STREAM_CODEC.encode(registryBuffer, get());
+      return;
+    }
+    throw new IllegalArgumentException("FluidOutput network encoding requires RegistryFriendlyByteBuf");
   }
 
   /**
@@ -131,7 +140,10 @@ public abstract class FluidOutput implements Supplier<FluidStack> {
    * @return  Item output
    */
   public static FluidOutput read(FriendlyByteBuf buffer) {
-    return fromStack(buffer.readFluidStack());
+    if (buffer instanceof RegistryFriendlyByteBuf registryBuffer) {
+      return fromStack(FluidStack.OPTIONAL_STREAM_CODEC.decode(registryBuffer));
+    }
+    throw new IllegalArgumentException("FluidOutput network decoding requires RegistryFriendlyByteBuf");
   }
 
   /** Class for an output that is just an item, simplifies NBT for serializing as vanilla forces NBT to be set for tools and forge goes through extra steps when NBT is set */
@@ -144,8 +156,13 @@ public abstract class FluidOutput implements Supplier<FluidStack> {
 
     @Override
     public FluidStack get() {
-      if (cachedStack == null) {
-        cachedStack = new FluidStack(fluid, amount);
+      if (cachedStack == null || !fluid.builtInRegistryHolder().areComponentsBound()) {
+        Holder.Reference<Fluid> holder = fluid.builtInRegistryHolder();
+        if (holder.areComponentsBound()) {
+          cachedStack = new FluidStack(holder, amount);
+        } else {
+          return new FluidStack(Holder.direct(fluid, DataComponentMap.EMPTY), amount);
+        }
       }
       return cachedStack;
     }
@@ -203,7 +220,16 @@ public abstract class FluidOutput implements Supplier<FluidStack> {
         if (preference.isEmpty()) {
           return FluidStack.EMPTY;
         }
-        cachedResult = new FluidStack(preference.orElseThrow(), amount, nbt);
+        Fluid fluid = preference.orElseThrow();
+        Holder.Reference<Fluid> holder = fluid.builtInRegistryHolder();
+        if (holder.areComponentsBound()) {
+          cachedResult = new FluidStack(holder, amount);
+          if (nbt != null) cachedResult.set(DataComponents.CUSTOM_DATA, CustomData.of(nbt.copy()));
+        } else {
+          FluidStack earlyResult = new FluidStack(Holder.direct(fluid, DataComponentMap.EMPTY), amount);
+          if (nbt != null) earlyResult.set(DataComponents.CUSTOM_DATA, CustomData.of(nbt.copy()));
+          return earlyResult;
+        }
       }
       return cachedResult;
     }

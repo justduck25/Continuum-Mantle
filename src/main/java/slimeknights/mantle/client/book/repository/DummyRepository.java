@@ -1,6 +1,6 @@
 package slimeknights.mantle.client.book.repository;
 
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.resources.Resource;
 import slimeknights.mantle.client.book.data.SectionData;
 
@@ -17,12 +17,12 @@ public class DummyRepository extends BookRepository {
   }
 
   @Override
-  public ResourceLocation getResourceLocation(@Nullable String path, boolean safe) {
+  public Identifier getIdentifier(@Nullable String path, boolean safe) {
     return null;
   }
 
   @Override
-  public Optional<Resource> getLocation(@Nullable ResourceLocation loc) {
+  public Optional<Resource> getLocation(@Nullable Identifier loc) {
     return Optional.empty();
   }
 

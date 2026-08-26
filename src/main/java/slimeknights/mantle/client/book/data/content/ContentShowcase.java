@@ -1,7 +1,7 @@
 package slimeknights.mantle.client.book.data.content;
 
 import lombok.Getter;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import slimeknights.mantle.Mantle;
 import slimeknights.mantle.client.book.data.BookData;
 import slimeknights.mantle.client.book.data.element.IngredientData;
@@ -18,7 +18,7 @@ import java.util.ArrayList;
 
 /** Page that showcases an item with text below */
 public class ContentShowcase extends PageContent {
-  public static final transient ResourceLocation ID = Mantle.getResource("showcase");
+  public static final transient Identifier ID = Mantle.getResource("showcase");
 
   /** Title of the page */
   @Getter

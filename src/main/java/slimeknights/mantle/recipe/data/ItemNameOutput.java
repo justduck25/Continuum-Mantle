@@ -6,7 +6,7 @@ import com.google.gson.JsonPrimitive;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
 import slimeknights.mantle.data.loadable.common.NBTLoadable;
 import slimeknights.mantle.recipe.helper.ItemOutput;
@@ -18,7 +18,7 @@ import javax.annotation.Nullable;
  */
 @RequiredArgsConstructor(staticName = "fromName")
 public class ItemNameOutput extends ItemOutput {
-  private final ResourceLocation name;
+  private final Identifier name;
   @Getter
   private final int count;
   @Nullable
@@ -30,7 +30,7 @@ public class ItemNameOutput extends ItemOutput {
    * @param count  Count
    * @return  Output
    */
-  public static ItemNameOutput fromName(ResourceLocation name, int count) {
+  public static ItemNameOutput fromName(Identifier name, int count) {
     return fromName(name, count, null);
   }
 
@@ -39,7 +39,7 @@ public class ItemNameOutput extends ItemOutput {
    * @param name  Item name
    * @return  Output
    */
-  public static ItemNameOutput fromName(ResourceLocation name) {
+  public static ItemNameOutput fromName(Identifier name) {
     return fromName(name, 1);
   }
 

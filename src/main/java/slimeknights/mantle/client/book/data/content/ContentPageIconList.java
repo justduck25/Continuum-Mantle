@@ -1,12 +1,17 @@
 package slimeknights.mantle.client.book.data.content;
 
 import com.google.common.collect.Lists;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.List;
 import lombok.Getter;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.FormattedText;
 import slimeknights.mantle.client.book.data.BookData;
+import slimeknights.mantle.client.book.data.content.ContentPadding.ContentRightPadding;
 import slimeknights.mantle.client.book.data.PageData;
 import slimeknights.mantle.client.book.data.SectionData;
-import slimeknights.mantle.client.book.data.content.ContentPadding.ContentRightPadding;
 import slimeknights.mantle.client.screen.book.BookScreen;
 import slimeknights.mantle.client.screen.book.element.BookElement;
 import slimeknights.mantle.client.screen.book.element.PageIconLinkElement;
@@ -14,11 +19,6 @@ import slimeknights.mantle.client.screen.book.element.SizedBookElement;
 import slimeknights.mantle.util.html.HtmlElement;
 import slimeknights.mantle.util.html.HtmlGroup;
 import slimeknights.mantle.util.html.HtmlSerializable;
-
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.List;
 
 /**
  * Index page where each link in the index is an icon rather than text. Used notably for material pages in Tinkers' Construct.
@@ -71,7 +71,7 @@ public class ContentPageIconList extends PageContent {
       totalHeight -= getTitleHeight();
     }
     if (subText != null) {
-      totalHeight -= 16 + this.parent.parent.parent.fontRenderer.wordWrapHeight(subText, BookScreen.PAGE_WIDTH) * 12 / 9;
+      totalHeight -= 16 + this.parent.parent.parent.fontRenderer.wordWrapHeight(FormattedText.of(subText), BookScreen.PAGE_WIDTH) * 12 / 9;
     }
     return totalHeight / this.height;
   }
@@ -233,7 +233,7 @@ public class ContentPageIconList extends PageContent {
   public HtmlSerializable toHTML(BookData book) {
     int yOff = 0;
     if (this.title != null) yOff = getTitleHeight();
-    if (this.subText != null) yOff = book.fontRenderer.wordWrapHeight(this.subText, 182) * 12 / 9 + 16;
+    if (this.subText != null) yOff = book.fontRenderer.wordWrapHeight(FormattedText.of(this.subText), 182) * 12 / 9 + 16;
 
     return HtmlGroup.indent().add(
       makeTitleHTML(),

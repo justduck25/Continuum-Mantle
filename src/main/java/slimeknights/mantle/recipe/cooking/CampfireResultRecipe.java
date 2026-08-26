@@ -1,15 +1,16 @@
 package slimeknights.mantle.recipe.cooking;
 
 import lombok.Getter;
-import net.minecraft.core.RegistryAccess;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.Container;
-import net.minecraft.world.item.ItemStack;
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.AbstractCookingRecipe;
-import net.minecraft.world.item.crafting.CampfireCookingRecipe;
 import net.minecraft.world.item.crafting.CookingBookCategory;
 import net.minecraft.world.item.crafting.Ingredient;
+import net.minecraft.world.item.crafting.RecipeBookCategories;
+import net.minecraft.world.item.crafting.RecipeBookCategory;
 import net.minecraft.world.item.crafting.RecipeSerializer;
+import net.minecraft.world.item.crafting.RecipeType;
 import slimeknights.mantle.data.loadable.common.IngredientLoadable;
 import slimeknights.mantle.data.loadable.field.ContextKey;
 import slimeknights.mantle.data.loadable.field.LoadableField;
@@ -19,34 +20,36 @@ import slimeknights.mantle.recipe.MantleRecipes;
 import slimeknights.mantle.recipe.helper.ItemOutput;
 import slimeknights.mantle.recipe.helper.LoadableRecipeSerializer;
 
-/** Extension of {@link CampfireCookingRecipe} to support {@link ItemOutput} */
 @Getter
-public class CampfireResultRecipe extends CampfireCookingRecipe implements CookingResultRecipe {
-  public static LoadableField<Integer, AbstractCookingRecipe> COOKING_TIME_FIELD = IntLoadable.FROM_ONE.defaultField("cooking_time", 600, true, AbstractCookingRecipe::getCookingTime);
+public class CampfireResultRecipe extends AbstractResultCookingRecipe {
+  public static LoadableField<Integer, AbstractCookingRecipe> COOKING_TIME_FIELD = IntLoadable.FROM_ONE.defaultField("cooking_time", 600, true, AbstractCookingRecipe::cookingTime);
   public static final RecordLoadable<CampfireResultRecipe> LOADABLE = RecordLoadable.create(
     ContextKey.ID.requiredField(), LoadableRecipeSerializer.RECIPE_GROUP, CookingResultRecipe.CATEGORY_FIELD,
-    IngredientLoadable.DISALLOW_EMPTY.requiredField("ingredient", r -> r.ingredient),
+    IngredientLoadable.DISALLOW_EMPTY.requiredField("ingredient", AbstractCookingRecipe::input),
     RESULT_FIELD, EXPERIENCE_FIELD, COOKING_TIME_FIELD,
     CampfireResultRecipe::new);
 
-  private final ItemOutput result;
-  public CampfireResultRecipe(ResourceLocation id, String group, CookingBookCategory category, Ingredient ingredient, ItemOutput result, float experience, int cookingTime) {
-    super(id, group, category, ingredient, ItemStack.EMPTY, experience, cookingTime);
-    this.result = result;
+  public CampfireResultRecipe(Identifier id, String group, CookingBookCategory category, Ingredient ingredient, ItemOutput result, float experience, int cookingTime) {
+    super(group, category, ingredient, result, experience, cookingTime);
   }
 
   @Override
-  public RecipeSerializer<?> getSerializer() {
+  public RecipeSerializer<? extends AbstractCookingRecipe> getSerializer() {
     return MantleRecipes.CAMPFIRE.get();
   }
 
   @Override
-  public ItemStack getResultItem(RegistryAccess pRegistryAccess) {
-    return result.get();
+  public RecipeType<? extends AbstractCookingRecipe> getType() {
+    return RecipeType.CAMPFIRE_COOKING;
   }
 
   @Override
-  public ItemStack assemble(Container pContainer, RegistryAccess pRegistryAccess) {
-    return result.copy();
+  protected Item furnaceIcon() {
+    return Items.CAMPFIRE;
+  }
+
+  @Override
+  public RecipeBookCategory recipeBookCategory() {
+    return RecipeBookCategories.CAMPFIRE;
   }
 }

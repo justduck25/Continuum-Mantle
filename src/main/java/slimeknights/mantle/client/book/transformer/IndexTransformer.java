@@ -2,7 +2,7 @@ package slimeknights.mantle.client.book.transformer;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import slimeknights.mantle.Mantle;
 import slimeknights.mantle.client.book.data.BookData;
 import slimeknights.mantle.client.book.data.PageData;
@@ -20,9 +20,9 @@ import java.util.stream.Collectors;
 
 public class IndexTransformer extends BookTransformer {
   public static final IndexTransformer INSTANCE = new IndexTransformer();
-  public static final ResourceLocation INDEX_EXTRA_DATA = Mantle.getResource("index");
+  public static final Identifier INDEX_EXTRA_DATA = Mantle.getResource("index");
 
-  private static final Set<ResourceLocation> hiddenPageTypes = new HashSet<>();
+  private static final Set<Identifier> hiddenPageTypes = new HashSet<>();
 
   /** Divides a number by the given divisor, rounding up */
   private static int ceilingDivide(int value, int divisor) {
@@ -154,7 +154,7 @@ public class IndexTransformer extends BookTransformer {
    * @apiNote This will implicitly hide this page type from all books, not just your own, so caution is advised
    * @param pageType The type of page to implicitly hide
    */
-  public static void addHiddenPageType(ResourceLocation pageType) {
+  public static void addHiddenPageType(Identifier pageType) {
     hiddenPageTypes.add(pageType);
   }
 }

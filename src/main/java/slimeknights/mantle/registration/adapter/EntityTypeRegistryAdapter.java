@@ -1,32 +1,27 @@
 package slimeknights.mantle.registration.adapter;
 
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
-import net.minecraftforge.registries.IForgeRegistry;
+
+import java.util.function.BiConsumer;
 
 /**
- * Registry adapter for registering entity types
+ * Registry adapter for registering entity types.
  */
 @SuppressWarnings("unused")
 public class EntityTypeRegistryAdapter extends RegistryAdapter<EntityType<?>> {
-  /** @inheritDoc */
-  public EntityTypeRegistryAdapter(IForgeRegistry<EntityType<?>> registry, String modId) {
-    super(registry, modId);
+  public EntityTypeRegistryAdapter(BiConsumer<Identifier, EntityType<?>> register, String modId) {
+    super(register, modId);
   }
 
-  /** @inheritDoc */
-  public EntityTypeRegistryAdapter(IForgeRegistry<EntityType<?>> registry) {
-    super(registry);
+  public EntityTypeRegistryAdapter(BiConsumer<Identifier, EntityType<?>> register) {
+    super(register);
   }
 
-  /**
-   * Registers an entity type from a builder
-   * @param builder  Builder instance
-   * @param name     Type name
-   * @param <T>      Entity type
-   * @return  Registered entity type
-   */
   public <T extends Entity> EntityType<T> register(EntityType.Builder<T> builder, String name) {
-    return register(builder.build(resourceName(name)), name);
+    return register(builder.build(ResourceKey.create(Registries.ENTITY_TYPE, getResource(name))), name);
   }
 }

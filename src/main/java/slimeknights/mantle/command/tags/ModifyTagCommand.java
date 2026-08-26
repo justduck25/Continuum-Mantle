@@ -8,7 +8,7 @@ import com.mojang.brigadier.exceptions.Dynamic2CommandExceptionType;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.PackType;
 import net.minecraft.tags.TagEntry;
 import net.minecraft.tags.TagFile;
@@ -63,7 +63,7 @@ public class ModifyTagCommand {
   }
 
   /** Saves the passed tag */
-  private static void saveTag(ResourceLocation regName, ResourceLocation tag, Path path, TagFile contents) throws CommandSyntaxException {
+  private static void saveTag(Identifier regName, Identifier tag, Path path, TagFile contents) throws CommandSyntaxException {
     try {
       Files.createDirectories(path.getParent());
       try (BufferedWriter writer = Files.newBufferedWriter(path)) {
@@ -76,19 +76,19 @@ public class ModifyTagCommand {
   }
 
   /** Gets the path for the given tag */
-  private static Path getPath(Path pack, TagSource<?> registry, ResourceLocation tag) {
+  private static Path getPath(Path pack, TagSource<?> registry, Identifier tag) {
     return pack.resolve(PackType.SERVER_DATA.getDirectory() + '/' + tag.getNamespace() + '/' + registry.folder() + '/' + tag.getPath() + ".json");
   }
 
   /** Gets the clickable component for the given tag */
-  private static Component tagComponent(ResourceLocation tag, Path path) {
+  private static Component tagComponent(Identifier tag, Path path) {
     return GeneratePackHelper.getPathComponent(Component.literal(tag.toString()), path.toString());
   }
 
   /** Runs the command */
   private static <T> int modify(CommandContext<CommandSourceStack> context, TagSource<T> registry, Action action) throws CommandSyntaxException {
-    ResourceLocation regName = registry.key().location();
-    ResourceLocation tag = context.getArgument("tag", ResourceLocation.class);
+    Identifier regName = registry.key().identifier();
+    Identifier tag = context.getArgument("tag", Identifier.class);
     ResourceOrTagKeyArgument.Result entry = ResourceOrTagKeyArgument.get(context, "entry");
 
     // setup the pack
@@ -151,8 +151,8 @@ public class ModifyTagCommand {
 
   /** Runs the command */
   private static <T> int clear(CommandContext<CommandSourceStack> context, TagSource<T> registry) throws CommandSyntaxException {
-    ResourceLocation regName = registry.key().location();
-    ResourceLocation tag = context.getArgument("tag", ResourceLocation.class);
+    Identifier regName = registry.key().identifier();
+    Identifier tag = context.getArgument("tag", Identifier.class);
 
     // setup the pack
     CommandSourceStack source = context.getSource();

@@ -4,8 +4,6 @@
     "amount": 250,
     "tag": "mantle:water"
   },
-  "input": {
-    "item": "minecraft:sponge"
-  },
+  "input": "minecraft:sponge",
   "result": "minecraft:wet_sponge"
 }

@@ -6,10 +6,10 @@ import lombok.Getter;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Direction.Axis;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.util.GsonHelper;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraftforge.client.event.RegisterClientReloadListenersEvent;
+import net.neoforged.neoforge.client.event.AddClientReloadListenersEvent;
 import org.joml.Vector3f;
 import slimeknights.mantle.Mantle;
 import slimeknights.mantle.data.datamap.BlockStateDataMapLoader;
@@ -46,12 +46,12 @@ public record FaucetFluid(List<FluidCuboid> side, List<FluidCuboid> center, bool
   /**
    * Call during the event to register the reload listener
    */
-  public static void initialize(RegisterClientReloadListenersEvent event) {
+  public static void initialize(AddClientReloadListenersEvent event) {
     if (initialized) {
       return;
     }
     initialized = true;
-    event.registerReloadListener(REGISTRY);
+    event.addListener(Mantle.getResource("faucet_fluid"), REGISTRY);
   }
 
   /**
@@ -112,7 +112,7 @@ public record FaucetFluid(List<FluidCuboid> side, List<FluidCuboid> center, bool
   /** Loader implementation */
   public static class Loader extends BlockStateDataMapLoader<FaucetFluid> {
     /** Name of the default fluid model, shared between Ceramics and Tinkers Construct */
-    private static final ResourceLocation DEFAULT_NAME = Mantle.getResource("_default");
+    private static final Identifier DEFAULT_NAME = Mantle.getResource("_default");
     @Getter
     private FaucetFluid defaultInstance = FaucetFluid.EMPTY;
     private final DefaultingFaucetFluidLoader dataLoader = new DefaultingFaucetFluidLoader();
@@ -121,7 +121,7 @@ public record FaucetFluid(List<FluidCuboid> side, List<FluidCuboid> center, bool
     }
 
     @Override
-    protected RecordLoadable<FaucetFluid> prepareLoader(Map<ResourceLocation,JsonElement> jsons) {
+    protected RecordLoadable<FaucetFluid> prepareLoader(Map<Identifier,JsonElement> jsons) {
       JsonElement json = jsons.get(DEFAULT_NAME);
       defaultInstance = EMPTY;
       if (json == null) {

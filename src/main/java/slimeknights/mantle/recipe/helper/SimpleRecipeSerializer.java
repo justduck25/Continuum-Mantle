@@ -1,25 +1,24 @@
 package slimeknights.mantle.recipe.helper;
 
-import com.google.gson.JsonObject;
-import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.resources.ResourceLocation;
+import com.mojang.serialization.MapCodec;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.crafting.Recipe;
 import net.minecraft.world.item.crafting.RecipeSerializer;
 
 import java.util.function.Function;
 
-/** Simple implementation of a recipe serializer with no properties other than recipe ID. */
-public record SimpleRecipeSerializer<T extends Recipe<?>>(Function<ResourceLocation,T> constructor) implements RecipeSerializer<T> {
-  @Override
-  public T fromJson(ResourceLocation id, JsonObject pSerializedRecipe) {
-    return constructor.apply(id);
-  }
+/** Helpers for recipe serializers with no properties other than legacy recipe ID. */
+public final class SimpleRecipeSerializer {
+  private static final Identifier FALLBACK_ID = Identifier.fromNamespaceAndPath("mantle", "simple_recipe");
 
-  @Override
-  public T fromNetwork(ResourceLocation id, FriendlyByteBuf pBuffer) {
-    return constructor.apply(id);
-  }
+  private SimpleRecipeSerializer() {}
 
-  @Override
-  public void toNetwork(FriendlyByteBuf pBuffer, T pRecipe) {}
+  public static <T extends Recipe<?>> RecipeSerializer<T> of(Function<Identifier,T> constructor) {
+    return new RecipeSerializer<>(
+      MapCodec.unit(() -> constructor.apply(FALLBACK_ID)),
+      StreamCodec.of((RegistryFriendlyByteBuf buf, T recipe) -> {}, buf -> constructor.apply(FALLBACK_ID))
+    );
+  }
 }

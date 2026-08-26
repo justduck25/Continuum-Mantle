@@ -1,18 +1,24 @@
 package slimeknights.mantle.client.book.data.content;
 
+import java.util.ArrayList;
+import java.util.List;
 import lombok.Getter;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.NonNullList;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
+import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.util.context.ContextMap;
 import net.minecraft.world.item.crafting.AbstractCookingRecipe;
 import net.minecraft.world.item.crafting.Recipe;
-import net.minecraft.world.level.Level;
+import net.minecraft.world.item.crafting.RecipeHolder;
+import net.minecraft.world.item.crafting.RecipeManager;
+import net.minecraft.world.item.crafting.display.SlotDisplayContext;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Blocks;
-import org.apache.commons.lang3.StringUtils;
-import slimeknights.mantle.Mantle;
+import net.minecraft.world.level.Level;
 import slimeknights.mantle.client.book.data.BookData;
 import slimeknights.mantle.client.book.data.element.ImageData;
 import slimeknights.mantle.client.book.data.element.IngredientData;
@@ -23,16 +29,14 @@ import slimeknights.mantle.client.screen.book.element.ImageElement;
 import slimeknights.mantle.client.screen.book.element.ItemElement;
 import slimeknights.mantle.client.screen.book.element.TextElement;
 import slimeknights.mantle.client.screen.book.element.TooltipElement;
-
-import java.util.ArrayList;
-import java.util.List;
-
+import slimeknights.mantle.Mantle;
+import slimeknights.mantle.recipe.ingredient.SizedIngredient;
 import static slimeknights.mantle.client.screen.book.Textures.TEX_SMELTING;
 
 public class ContentSmelting extends PageContent {
-  public static final ResourceLocation ID = Mantle.getResource("smelting");
+  public static final Identifier ID = Mantle.getResource("smelting");
 
-  private static final NonNullList<ItemStack> FUELS;
+  private static NonNullList<ItemStack> fuels;
 
   public static final transient int TEX_SIZE = 128;
   public static final transient ImageData IMG_SMELTING = new ImageData(TEX_SMELTING, 0, 0, 110, 114, TEX_SIZE, TEX_SIZE);
@@ -91,28 +95,42 @@ public class ContentSmelting extends PageContent {
       return this.fuel.getItems();
     }
 
-    return FUELS;
+    return getDefaultFuels();
   }
 
   @Override
   public void load() {
     super.load();
 
-    if (!StringUtils.isEmpty(this.recipe) && ResourceLocation.isValidResourceLocation(this.recipe)) {
-      Level level = Minecraft.getInstance().level;
+    if (this.recipe != null && !this.recipe.isEmpty() && Identifier.tryParse(this.recipe) != null) {
+      Minecraft minecraft = Minecraft.getInstance();
+      Level level = minecraft.level;
       assert level != null;
-      Recipe<?> recipe = level.getRecipeManager().byKey(new ResourceLocation(this.recipe)).orElse(null);
+      Identifier recipeId = Identifier.parse(this.recipe);
+      ResourceKey<Recipe<?>> key = ResourceKey.create(Registries.RECIPE, recipeId);
+      RecipeHolder<?> holder = level.recipeAccess() instanceof RecipeManager manager
+        ? manager.byKey(key).orElse(null)
+        : minecraft.getSingleplayerServer() == null ? null : minecraft.getSingleplayerServer().getRecipeManager().byKey(key).orElse(null);
+      Recipe<?> recipe = holder != null ? holder.value() : null;
 
-      if (recipe instanceof AbstractCookingRecipe) {
-        this.input = IngredientData.getItemStackData(NonNullList.of(ItemStack.EMPTY, recipe.getIngredients().get(0).getItems()));
-        this.cookTime = ((AbstractCookingRecipe) recipe).getCookingTime();
-        this.result = IngredientData.getItemStackData(recipe.getResultItem(level.registryAccess()));
+      if (recipe instanceof AbstractCookingRecipe cooking) {
+        ContextMap displayContext = SlotDisplayContext.fromLevel(level);
+        NonNullList<ItemStack> inputStacks = NonNullList.create();
+        inputStacks.addAll(cooking.input().display().resolveForStacks(displayContext));
+        if (inputStacks.isEmpty()) {
+          inputStacks.addAll(SizedIngredient.of(cooking.input()).getMatchingStacks());
+        }
+        if (inputStacks.isEmpty()) inputStacks.add(ItemStack.EMPTY);
+        this.input = IngredientData.getItemStackData(inputStacks);
+        this.cookTime = cooking.cookingTime();
+        ItemStack resultStack = cooking.display().isEmpty() ? ItemStack.EMPTY : cooking.display().get(0).result().resolveForFirstStack(displayContext);
+        this.result = IngredientData.getItemStackData(resultStack);
       }
-    }
-  }
+    }  }
 
-  static {
-    FUELS = NonNullList.of(ItemStack.EMPTY,
+  private static NonNullList<ItemStack> getDefaultFuels() {
+    if (fuels == null) {
+      fuels = NonNullList.of(ItemStack.EMPTY,
       new ItemStack(Blocks.OAK_SLAB),
       new ItemStack(Blocks.SPRUCE_SLAB),
       new ItemStack(Blocks.BIRCH_SLAB),
@@ -141,5 +159,7 @@ public class ContentSmelting extends PageContent {
       new ItemStack(Items.BLAZE_ROD),
       new ItemStack(Items.WOODEN_SHOVEL),
       new ItemStack(Items.WOODEN_AXE));
+    }
+    return fuels;
   }
 }

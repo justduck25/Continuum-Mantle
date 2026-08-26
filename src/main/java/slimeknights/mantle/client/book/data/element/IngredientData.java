@@ -7,19 +7,23 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
 import com.google.gson.JsonPrimitive;
+import net.minecraft.core.NonNullList;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Ingredient;
-import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.StringTag;
-import net.minecraft.core.NonNullList;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.StringUtil;
-import net.minecraftforge.registries.ForgeRegistries;
 import slimeknights.mantle.client.book.repository.BookRepository;
+import slimeknights.mantle.data.loadable.common.ItemStackLoadable;
 import slimeknights.mantle.recipe.ingredient.SizedIngredient;
+import slimeknights.mantle.util.typed.TypedMap;
 
 import java.lang.reflect.Type;
 import java.util.ArrayList;
@@ -38,16 +42,26 @@ public class IngredientData implements IDataElement {
 
   public static IngredientData getItemStackData(ItemStack stack) {
     IngredientData data = new IngredientData();
-    data.items = NonNullList.withSize(1, stack);
     data.customData = true;
+    if (stack.isEmpty()) {
+      data.items = NonNullList.withSize(1, data.getMissingItem("Empty item stack"));
+    } else {
+      data.items = NonNullList.withSize(1, stack);
+    }
 
     return data;
   }
 
   public static IngredientData getItemStackData(NonNullList<ItemStack> items) {
     IngredientData data = new IngredientData();
-    data.items = items;
     data.customData = true;
+    NonNullList<ItemStack> filtered = NonNullList.create();
+    for (ItemStack stack : items) {
+      if (!stack.isEmpty()) {
+        filtered.add(stack);
+      }
+    }
+    data.items = filtered.isEmpty() ? NonNullList.withSize(1, data.getMissingItem("No display items resolved")) : filtered;
 
     return data;
   }
@@ -55,9 +69,11 @@ public class IngredientData implements IDataElement {
   @Override
   public void load(BookRepository source) {
     if (this.customData) {
+      if (this.items == null || this.items.isEmpty()) {
+        this.items = NonNullList.withSize(1, getMissingItem("No display items resolved"));
+      }
       return;
     }
-
     ArrayList<ItemStack> stacks = new ArrayList<>();
     for(SizedIngredient ingredient : ingredients) {
       if(ingredient == null) {
@@ -82,8 +98,8 @@ public class IngredientData implements IDataElement {
   private ItemStack getMissingItem(String error) {
     ItemStack missingItem = new ItemStack(Items.BARRIER);
 
-    CompoundTag display = missingItem.getOrCreateTagElement("display");
-    display.putString("Name", "\u00A7rError Loading Item");
+    missingItem.set(DataComponents.CUSTOM_NAME, Component.literal("Error Loading Item"));
+    CompoundTag display = new CompoundTag();
     ListTag lore = new ListTag();
     if(!StringUtil.isNullOrEmpty(error)) {
       lore.add(StringTag.valueOf("\u00A7r\u00A7eError:"));
@@ -98,6 +114,14 @@ public class IngredientData implements IDataElement {
     @Override
     public IngredientData deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context) throws JsonParseException {
       IngredientData data = new IngredientData();
+      readAction(data, json);
+
+      ItemStack displayStack = readDisplayStack(json);
+      if (displayStack != null) {
+        data.customData = true;
+        data.items = NonNullList.withSize(1, displayStack);
+        return data;
+      }
 
       if(json.isJsonArray()) {
         JsonArray array = json.getAsJsonArray();
@@ -107,7 +131,7 @@ public class IngredientData implements IDataElement {
           try {
             data.ingredients[i] = readIngredient(array.get(i));
           } catch (Exception e) {
-            data.ingredients[i] = SizedIngredient.of(Ingredient.of(data.getMissingItem(e.getMessage())));
+            data.ingredients[i] = SizedIngredient.of(Ingredient.of(Items.BARRIER));
           }
         }
 
@@ -121,20 +145,42 @@ public class IngredientData implements IDataElement {
         return data;
       }
 
-      if(json.isJsonObject()) {
-        JsonObject object = json.getAsJsonObject();
-        if (object.has("action")) {
-          JsonElement action = object.get("action");
-          if (action.isJsonPrimitive()) {
-            JsonPrimitive primitive = action.getAsJsonPrimitive();
-            if (primitive.isString()) {
-              data.action = primitive.getAsString();
-            }
+      return data;
+    }
+
+    private static void readAction(IngredientData data, JsonElement json) {
+      if (!json.isJsonObject()) {
+        return;
+      }
+      JsonObject object = json.getAsJsonObject();
+      if (object.has("action")) {
+        JsonElement action = object.get("action");
+        if (action.isJsonPrimitive()) {
+          JsonPrimitive primitive = action.getAsJsonPrimitive();
+          if (primitive.isString()) {
+            data.action = primitive.getAsString();
           }
         }
       }
+    }
 
-      return data;
+    private static ItemStack readDisplayStack(JsonElement json) {
+      if (!json.isJsonObject()) {
+        return null;
+      }
+      JsonObject object = json.getAsJsonObject();
+      if (object.has("item") && object.get("item").isJsonObject()) {
+        return readDisplayStack(object.get("item"));
+      }
+      if (object.has("type") && object.has("item") && object.get("item").isJsonPrimitive()) {
+        JsonObject stackJson = object.deepCopy();
+        stackJson.remove("type");
+        return ItemStackLoadable.REQUIRED_STACK_NBT.deserialize(stackJson, TypedMap.EMPTY);
+      }
+      if (object.has("nbt") && object.has("item") && object.get("item").isJsonPrimitive()) {
+        return ItemStackLoadable.REQUIRED_STACK_NBT.deserialize(object, TypedMap.EMPTY);
+      }
+      return null;
     }
 
     private SizedIngredient readIngredient(JsonElement json) {
@@ -142,7 +188,8 @@ public class IngredientData implements IDataElement {
         JsonPrimitive primitive = json.getAsJsonPrimitive();
 
         if(primitive.isString()) {
-          Item item = ForgeRegistries.ITEMS.getValue(new ResourceLocation(primitive.getAsString()));
+          Identifier itemId = Identifier.parse(primitive.getAsString());
+          Item item = BuiltInRegistries.ITEM.get(itemId).map(holder -> holder.value()).orElse(Items.BARRIER);
           return SizedIngredient.fromItems(item);
         }
       }

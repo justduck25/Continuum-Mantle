@@ -6,7 +6,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonSyntaxException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.resources.Resource;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.server.packs.resources.ResourceManagerReloadListener;
@@ -34,7 +34,7 @@ public abstract class MergingJsonDataLoader<B> implements ResourceManagerReloadL
   @VisibleForTesting
   protected final String folder;
   @VisibleForTesting
-  protected final Function<ResourceLocation,B> builderConstructor;
+  protected final Function<Identifier,B> builderConstructor;
 
   /**
    * Parses a particular JSON into the builder
@@ -43,21 +43,21 @@ public abstract class MergingJsonDataLoader<B> implements ResourceManagerReloadL
    * @param element   JSON data
    * @throws JsonSyntaxException  If the json failed to parse
    */
-  protected abstract void parse(B builder, ResourceLocation id, JsonElement element) throws JsonSyntaxException;
+  protected abstract void parse(B builder, Identifier id, JsonElement element) throws JsonSyntaxException;
 
   /**
    * Called when the JSON finished parsing to handle the final map
    * @param map      Map of data
    * @param manager  Resource manager
    */
-  protected abstract void finishLoad(Map<ResourceLocation,B> map, ResourceManager manager);
+  protected abstract void finishLoad(Map<Identifier,B> map, ResourceManager manager);
 
   @Override
   public void onResourceManagerReload(ResourceManager manager) {
-    Map<ResourceLocation,B> map = new HashMap<>();
-    for (Entry<ResourceLocation,List<Resource>> entry : manager.listResourceStacks(folder, fileName -> fileName.getPath().endsWith(".json")).entrySet()) {
-      ResourceLocation filePath = entry.getKey();
-      ResourceLocation id = JsonHelper.localize(filePath, folder, ".json");
+    Map<Identifier,B> map = new HashMap<>();
+    for (Entry<Identifier,List<Resource>> entry : manager.listResourceStacks(folder, fileName -> fileName.getPath().endsWith(".json")).entrySet()) {
+      Identifier filePath = entry.getKey();
+      Identifier id = JsonHelper.localize(filePath, folder, ".json");
 
       for (Resource resource : entry.getValue()) {
         try (Reader reader = resource.openAsReader()) {

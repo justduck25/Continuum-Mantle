@@ -1,50 +1,44 @@
 package slimeknights.mantle.loot.function;
 
-import com.google.gson.JsonDeserializationContext;
-import com.google.gson.JsonObject;
+import com.mojang.serialization.MapCodec;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
+import net.minecraft.util.context.ContextKey;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.storage.loot.LootContext;
 import net.minecraft.world.level.storage.loot.functions.LootItemConditionalFunction;
-import net.minecraft.world.level.storage.loot.functions.LootItemFunctionType;
-import net.minecraft.world.level.storage.loot.parameters.LootContextParam;
-import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
 import net.minecraft.world.level.storage.loot.predicates.LootItemCondition;
+import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
 import slimeknights.mantle.Mantle;
 import slimeknights.mantle.block.entity.IRetexturedBlockEntity;
-import slimeknights.mantle.loot.MantleLoot;
 import slimeknights.mantle.util.RetexturedHelper;
 
+import java.util.List;
 import java.util.Set;
 
-/**
- * Applies the data for a retextured block to the dropped item. No configuration needed.
- */
+/** Applies the data for a retextured block to the dropped item. No configuration needed. */
 @SuppressWarnings("WeakerAccess")
 public class RetexturedLootFunction extends LootItemConditionalFunction {
-  public static final Serializer SERIALIZER = new Serializer();
+  public static final MapCodec<RetexturedLootFunction> MAP_CODEC = RecordCodecBuilder.mapCodec(instance ->
+    commonFields(instance).apply(instance, RetexturedLootFunction::new));
 
-  /**
-   * Creates a new instance from the given conditions
-   * @param conditions Conditions list
-   */
-  public RetexturedLootFunction(LootItemCondition[] conditions) {
+  public RetexturedLootFunction(List<LootItemCondition> conditions) {
     super(conditions);
   }
 
-  /** Creates a new instance with no conditions */
+  /** Creates a new instance with no conditions. */
   public RetexturedLootFunction() {
-    super(new LootItemCondition[0]);
+    super(List.of());
   }
 
   @Override
-  public Set<LootContextParam<?>> getReferencedContextParams() {
+  public Set<ContextKey<?>> getReferencedContextParams() {
     return Set.of(LootContextParams.BLOCK_ENTITY);
   }
 
   @Override
   protected ItemStack run(ItemStack stack, LootContext context) {
-    BlockEntity te = context.getParamOrNull(LootContextParams.BLOCK_ENTITY);
+    BlockEntity te = context.getOptionalParameter(LootContextParams.BLOCK_ENTITY);
     if (te instanceof IRetexturedBlockEntity retextured) {
       RetexturedHelper.setTexture(stack, retextured.getTextureName());
     } else {
@@ -55,14 +49,7 @@ public class RetexturedLootFunction extends LootItemConditionalFunction {
   }
 
   @Override
-  public LootItemFunctionType getType() {
-    return MantleLoot.RETEXTURED_FUNCTION;
-  }
-
-  private static class Serializer extends LootItemConditionalFunction.Serializer<RetexturedLootFunction> {
-    @Override
-    public RetexturedLootFunction deserialize(JsonObject json, JsonDeserializationContext ctx, LootItemCondition[] conditions) {
-      return new RetexturedLootFunction(conditions);
-    }
+  public MapCodec<RetexturedLootFunction> codec() {
+    return MAP_CODEC;
   }
 }

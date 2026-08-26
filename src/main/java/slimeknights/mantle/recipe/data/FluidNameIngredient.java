@@ -1,9 +1,9 @@
 package slimeknights.mantle.recipe.data;
 
 import lombok.RequiredArgsConstructor;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.material.Fluid;
-import net.minecraftforge.fluids.FluidStack;
+import net.neoforged.neoforge.fluids.FluidStack;
 import slimeknights.mantle.data.loadable.Loadable;
 import slimeknights.mantle.data.loadable.Loadables;
 import slimeknights.mantle.data.loadable.primitive.IntLoadable;
@@ -20,7 +20,7 @@ public class FluidNameIngredient extends FluidIngredient {
     IntLoadable.FROM_ONE.requiredField("amount", i -> i.amount),
     FluidNameIngredient::new);
 
-  private final ResourceLocation fluidName;
+  private final Identifier fluidName;
   private final int amount;
 
   @Override

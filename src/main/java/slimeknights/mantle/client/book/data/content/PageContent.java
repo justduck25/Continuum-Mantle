@@ -1,19 +1,19 @@
 package slimeknights.mantle.client.book.data.content;
 
+import java.util.ArrayList;
+import javax.annotation.Nullable;
 import lombok.Getter;
 import lombok.Setter;
-import slimeknights.mantle.client.book.IHTML;
+import net.minecraft.network.chat.FormattedText;
 import slimeknights.mantle.client.book.data.BookData;
-import slimeknights.mantle.client.book.data.PageData;
 import slimeknights.mantle.client.book.data.element.TextData;
+import slimeknights.mantle.client.book.data.PageData;
+import slimeknights.mantle.client.book.IHTML;
 import slimeknights.mantle.client.book.repository.BookRepository;
 import slimeknights.mantle.client.screen.book.BookScreen;
 import slimeknights.mantle.client.screen.book.element.BookElement;
 import slimeknights.mantle.client.screen.book.element.TextElement;
 import slimeknights.mantle.util.html.HtmlElement;
-
-import javax.annotation.Nullable;
-import java.util.ArrayList;
 
 /** Base for all page content */
 public abstract class PageContent implements IHTML {
@@ -162,7 +162,7 @@ public abstract class PageContent implements IHTML {
       subText.useOldColor = false;
       subText.rgbColor = color;
     }
-    int height = this.parent.parent.parent.fontRenderer.wordWrapHeight(text, BookScreen.PAGE_WIDTH) * 12 / 9;
+    int height = this.parent.parent.parent.fontRenderer.wordWrapHeight(FormattedText.of(text), BookScreen.PAGE_WIDTH) * 12 / 9;
     list.add(new TextElement(5, y, BookScreen.PAGE_WIDTH, height, subText));
     return height;
   }

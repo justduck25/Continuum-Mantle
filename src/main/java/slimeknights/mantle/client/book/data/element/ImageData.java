@@ -1,6 +1,7 @@
 package slimeknights.mantle.client.book.data.element;
 
-import net.minecraft.resources.ResourceLocation;
+
+import net.minecraft.resources.Identifier;
 import slimeknights.mantle.client.book.repository.BookRepository;
 
 public class ImageData extends DataLocation {
@@ -23,19 +24,19 @@ public class ImageData extends DataLocation {
   public ImageData() {
   }
 
-  public ImageData(ResourceLocation location, int u, int v, int uw, int vh, int texWidth, int texHeight) {
+  public ImageData(Identifier location, int u, int v, int uw, int vh, int texWidth, int texHeight) {
     this(location, u, v, uw, vh, texWidth, texHeight, uw, vh, 0xFFFFFF);
   }
 
-  public ImageData(ResourceLocation location, int u, int v, int uw, int vh, int texWidth, int texHeight, int colorMultiplier) {
+  public ImageData(Identifier location, int u, int v, int uw, int vh, int texWidth, int texHeight, int colorMultiplier) {
     this(location, u, v, uw, vh, texWidth, texHeight, uw, vh);
   }
 
-  public ImageData(ResourceLocation location, int u, int v, int uw, int vh, int texWidth, int texHeight, int width, int height) {
+  public ImageData(Identifier location, int u, int v, int uw, int vh, int texWidth, int texHeight, int width, int height) {
     this(location, u, v, uw, vh, texWidth, texHeight, width, height, 0xFFFFFF);
   }
 
-  public ImageData(ResourceLocation location, int u, int v, int uw, int vh, int texWidth, int texHeight, int width, int height, int colorMultiplier) {
+  public ImageData(Identifier location, int u, int v, int uw, int vh, int texWidth, int texHeight, int width, int height, int colorMultiplier) {
     this.location = location;
     this.u = u;
     this.v = v;
@@ -49,7 +50,7 @@ public class ImageData extends DataLocation {
   }
 
   static {
-    MISSING.location = new ResourceLocation("mantle:textures/gui/missingno.png");
+    MISSING.location = Identifier.parse("mantle:textures/gui/missingno.png");
     MISSING.texWidth = 32;
     MISSING.texHeight = 32;
     MISSING.uw = 32;

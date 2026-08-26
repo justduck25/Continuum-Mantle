@@ -4,7 +4,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonSyntaxException;
 import lombok.RequiredArgsConstructor;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import slimeknights.mantle.Mantle;
 import slimeknights.mantle.data.loadable.record.RecordLoadable;
 import slimeknights.mantle.util.JsonHelper;
@@ -56,7 +56,7 @@ public class FallbackPredicateRegistry<T,F> extends PredicateRegistry<T> {
     if (element.isJsonObject()) {
       return deserialize(element.getAsJsonObject(), context);
     } else if (compact && element.isJsonPrimitive()) {
-      ResourceLocation type = JsonHelper.convertToResourceLocation(element, "type");
+      Identifier type = JsonHelper.convertToIdentifier(element, "type");
       //  see if we have a primary loader, if so parse that
       RecordLoadable<? extends IJsonPredicate<T>> loader = loaders.getValue(type);
       if (loader != null) {
@@ -71,7 +71,7 @@ public class FallbackPredicateRegistry<T,F> extends PredicateRegistry<T> {
 
   @Override
   public IJsonPredicate<T> deserialize(JsonObject json, TypedMap context) {
-    ResourceLocation type = JsonHelper.getResourceLocation(json, "type");
+    Identifier type = JsonHelper.getIdentifier(json, "type");
     //  see if we have a primary loader, if so parse that
     RecordLoadable<? extends IJsonPredicate<T>> loader = loaders.getValue(type);
     if (loader != null) {

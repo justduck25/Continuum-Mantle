@@ -9,12 +9,12 @@ import com.mojang.brigadier.suggestion.SuggestionProvider;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.SharedSuggestionProvider;
-import net.minecraft.commands.arguments.ResourceLocationArgument;
+import net.minecraft.commands.arguments.IdentifierArgument;
 import net.minecraft.core.Registry;
 import net.minecraft.core.RegistryAccess.RegistryEntry;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.tags.TagKey;
 import org.jetbrains.annotations.ApiStatus.Internal;
 
@@ -49,7 +49,7 @@ public class TagSourceArgument {
   @Internal
   public static void registerSuggestions() {
     SOURCE = register(getResource("tag_source"), (context, builder) ->
-      SharedSuggestionProvider.suggestResource(allKeys(context).map(ResourceKey::location), builder));
+      SharedSuggestionProvider.suggestResource(allKeys(context).map(ResourceKey::identifier), builder));
     TAG = register(getResource("tag_source_tag"), (context, builder) -> {
       TagSource<?> result = get(context);
       return SharedSuggestionProvider.suggestResource(result.tagKeys().map(TagKey::location), builder);
@@ -82,23 +82,23 @@ public class TagSourceArgument {
   /* Argument creation */
 
   /** Creates an argument instance */
-  public static ArgumentType<ResourceLocation> source() {
-    return ResourceLocationArgument.id();
+  public static ArgumentType<Identifier> source() {
+    return IdentifierArgument.id();
   }
 
   /** Creates an argument builder with the given name */
-  public static RequiredArgumentBuilder<CommandSourceStack,ResourceLocation> argument() {
+  public static RequiredArgumentBuilder<CommandSourceStack,Identifier> argument() {
     return Commands.argument("type", source()).suggests(SOURCE);
   }
 
   /** Creates a tag argument builder with the given name */
-  public static RequiredArgumentBuilder<CommandSourceStack,ResourceLocation> tagArgument(String key) {
-    return Commands.argument(key, ResourceLocationArgument.id()).suggests(TAG);
+  public static RequiredArgumentBuilder<CommandSourceStack,Identifier> tagArgument(String key) {
+    return Commands.argument(key, IdentifierArgument.id()).suggests(TAG);
   }
 
   /** Creates a value argument builder with the given name */
-  public static RequiredArgumentBuilder<CommandSourceStack,ResourceLocation> valueArgument(String key) {
-    return Commands.argument(key, ResourceLocationArgument.id()).suggests(VALUE);
+  public static RequiredArgumentBuilder<CommandSourceStack,Identifier> valueArgument(String key) {
+    return Commands.argument(key, IdentifierArgument.id()).suggests(VALUE);
   }
 
   /** Creates an entry (tag or value) argument builder with the given name */
@@ -127,15 +127,13 @@ public class TagSourceArgument {
 
   /** Gets the result of this argument */
   public static TagSource<?> get(CommandContext<? extends SharedSuggestionProvider> context) throws CommandSyntaxException {
-    ResourceLocation id = context.getArgument("type", ResourceLocation.class);
+    Identifier id = context.getArgument("type", Identifier.class);
     ResourceKey<? extends Registry<?>> key = ResourceKey.createRegistryKey(id);
     // try a custom source first, saves a lookup to the registry
     TagSource<?> custom = CUSTOM_TAG_SOURCES.get(key);
     if (custom != null) {
       return custom;
     }
-    return new RegistryTagSource<>(context.getSource().registryAccess()
-      .registry(key)
-      .orElseThrow(() -> NOT_FOUND.create(id)));
+    throw NOT_FOUND.create(id);
   }
 }

@@ -1,18 +1,16 @@
 {
-  "type": "mantle:fill_item",
-  "conditions": [
+  "neoforge:conditions": [
     {
       "type": "mantle:tag_filled",
       "registry": "minecraft:fluid",
-      "tag": "forge:beetroot_soup"
+      "tag": "c:beetroot_soup"
     }
   ],
+  "type": "mantle:fill_item",
   "fluid": {
     "amount": 250,
-    "tag": "forge:beetroot_soup"
+    "tag": "c:beetroot_soup"
   },
-  "input": {
-    "item": "minecraft:bowl"
-  },
+  "input": "minecraft:bowl",
   "result": "minecraft:beetroot_soup"
 }

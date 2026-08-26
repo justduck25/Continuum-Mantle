@@ -1,35 +1,29 @@
 package slimeknights.mantle.loot.condition;
 
-import com.google.gson.JsonDeserializationContext;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonSerializationContext;
-import lombok.RequiredArgsConstructor;
-import net.minecraft.advancements.critereon.StatePropertiesPredicate;
+import com.mojang.serialization.MapCodec;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
+import net.minecraft.advancements.criterion.StatePropertiesPredicate;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.tags.TagKey;
+import net.minecraft.util.context.ContextKey;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.loot.LootContext;
-import net.minecraft.world.level.storage.loot.Serializer;
-import net.minecraft.world.level.storage.loot.parameters.LootContextParam;
 import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
 import net.minecraft.world.level.storage.loot.predicates.LootItemCondition;
-import net.minecraft.world.level.storage.loot.predicates.LootItemConditionType;
-import slimeknights.mantle.loot.MantleLoot;
-import slimeknights.mantle.util.JsonHelper;
 
+import java.util.Optional;
 import java.util.Set;
 
-/** Variant of {@link net.minecraft.world.level.storage.loot.predicates.LootItemBlockStatePropertyCondition} that allows using a tag for block type instead of a block */
-@RequiredArgsConstructor
-public class BlockTagLootCondition implements LootItemCondition {
-  public static final SerializerImpl SERIALIZER = new SerializerImpl();
-
-  private final TagKey<Block> tag;
-  private final StatePropertiesPredicate properties;
+/** Variant of the vanilla block state condition that allows using a block tag instead of a single block. */
+public record BlockTagLootCondition(TagKey<Block> tag, Optional<StatePropertiesPredicate> properties) implements LootItemCondition {
+  public static final MapCodec<BlockTagLootCondition> MAP_CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+    TagKey.codec(Registries.BLOCK).fieldOf("tag").forGetter(BlockTagLootCondition::tag),
+    StatePropertiesPredicate.CODEC.optionalFieldOf("properties").forGetter(BlockTagLootCondition::properties)
+  ).apply(instance, BlockTagLootCondition::new));
 
   public BlockTagLootCondition(TagKey<Block> tag) {
-    this(tag, StatePropertiesPredicate.ANY);
+    this(tag, Optional.empty());
   }
 
   public BlockTagLootCondition(TagKey<Block> tag, StatePropertiesPredicate.Builder builder) {
@@ -38,37 +32,17 @@ public class BlockTagLootCondition implements LootItemCondition {
 
   @Override
   public boolean test(LootContext context) {
-    BlockState state = context.getParamOrNull(LootContextParams.BLOCK_STATE);
-    return state != null && state.is(tag) && this.properties.matches(state);
+    BlockState state = context.getOptionalParameter(LootContextParams.BLOCK_STATE);
+    return state != null && state.is(tag) && properties.map(predicate -> predicate.matches(state)).orElse(true);
   }
 
   @Override
-  public Set<LootContextParam<?>> getReferencedContextParams() {
+  public Set<ContextKey<?>> getReferencedContextParams() {
     return Set.of(LootContextParams.BLOCK_STATE);
   }
 
   @Override
-  public LootItemConditionType getType() {
-    return MantleLoot.BLOCK_TAG_CONDITION;
-  }
-
-  private static class SerializerImpl implements Serializer<BlockTagLootCondition> {
-    @Override
-    public void serialize(JsonObject json, BlockTagLootCondition loot, JsonSerializationContext context) {
-      json.addProperty("tag", loot.tag.location().toString());
-      if (loot.properties != StatePropertiesPredicate.ANY) {
-        json.add("properties", loot.properties.serializeToJson());
-      }
-    }
-
-    @Override
-    public BlockTagLootCondition deserialize(JsonObject json, JsonDeserializationContext context) {
-      TagKey<Block> tag = TagKey.create(Registries.BLOCK, JsonHelper.getResourceLocation(json, "tag"));
-      StatePropertiesPredicate predicate = StatePropertiesPredicate.ANY;
-      if (json.has("properties")) {
-        predicate = StatePropertiesPredicate.fromJson(json.get("properties"));
-      }
-      return new BlockTagLootCondition(tag, predicate);
-    }
+  public MapCodec<BlockTagLootCondition> codec() {
+    return MAP_CODEC;
   }
 }

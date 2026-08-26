@@ -1,7 +1,7 @@
 package slimeknights.mantle.client.book.data.content;
 
 import lombok.RequiredArgsConstructor;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import slimeknights.mantle.Mantle;
 import slimeknights.mantle.client.book.IHTML;
 import slimeknights.mantle.client.book.data.BookData;
@@ -29,7 +29,7 @@ import java.util.Set;
  */
 @SuppressWarnings("unused")
 public class ContentIndex extends ContentListing {
-  public static final transient ResourceLocation ID = Mantle.getResource("index");
+  public static final transient Identifier ID = Mantle.getResource("index");
 
   private transient boolean loaded = false;
   private String[] hidden;

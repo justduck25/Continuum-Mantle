@@ -6,7 +6,8 @@ import com.google.gson.JsonSyntaxException;
 import lombok.Getter;
 import net.minecraft.core.Registry;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
+import net.minecraft.resources.FileToIdConverter;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.server.packs.resources.SimpleJsonResourceReloadListener;
 import net.minecraft.util.GsonHelper;
@@ -27,7 +28,7 @@ import java.util.Map.Entry;
 import java.util.function.BiConsumer;
 
 /** Simple loader mapping from a registry object to a piece of data parsed from JSON. Supports parenting to reuse data from another file */
-public class RegistryDataMapLoader<R,D> extends SimpleJsonResourceReloadListener {
+public class RegistryDataMapLoader<R,D> extends SimpleJsonResourceReloadListener<JsonElement> {
   /** Merges data from the parent JSON into the passed JSOn */
   public static final BiConsumer<JsonObject,JsonObject> COPY_PARENT_DATA = (json, parentJson) -> {
     for (Entry<String,JsonElement> entry : parentJson.entrySet()) {
@@ -68,7 +69,7 @@ public class RegistryDataMapLoader<R,D> extends SimpleJsonResourceReloadListener
    * @param merger      Logic to copy data from the parent into the target element
    */
   public RegistryDataMapLoader(String name, String folder, Registry<R> registry, RecordLoadable<D> dataLoader, BiConsumer<JsonObject,JsonObject> merger) {
-    super(JsonHelper.DEFAULT_GSON, folder);
+    super(JsonHelper.JSON_ELEMENT_CODEC, FileToIdConverter.json(folder));
     this.name = name;
     this.registry = registry;
     this.dataLoader = dataLoader;
@@ -77,17 +78,17 @@ public class RegistryDataMapLoader<R,D> extends SimpleJsonResourceReloadListener
   }
 
   @Override
-  protected void apply(Map<ResourceLocation,JsonElement> jsons, ResourceManager resourceManager, ProfilerFiller profiler) {
+  protected void apply(Map<Identifier,JsonElement> jsons, ResourceManager resourceManager, ProfilerFiller profiler) {
     long time = System.nanoTime();
     // the final data map being built
     Map<R,D> dataMap = new HashMap<>();
     // map of location to data to prevent needing to parse the same element twice, saves memory
-    Map<ResourceLocation,D> locationMap = new HashMap<>();
+    Map<Identifier,D> locationMap = new HashMap<>();
 
     // we only care about registry entry JSONs, so load by iterating the registry and seeing which ones have a JSON in the list
     // any in the list that are not in the registry may be used in parenting but won't be used directly.
     for (Entry<ResourceKey<R>,R> entry : registry.entrySet()) {
-      ResourceLocation location = entry.getKey().location();
+      Identifier location = entry.getKey().identifier();
       JsonElement element = jsons.get(location);
       if (element != null) {
         try {
@@ -110,16 +111,16 @@ public class RegistryDataMapLoader<R,D> extends SimpleJsonResourceReloadListener
   }
 
   /** Record paring a location to a return JSON object */
-  private record JsonFile(ResourceLocation location, JsonObject json) {}
+  private record JsonFile(Identifier location, JsonObject json) {}
 
   /** Parses the given entry into the relevant structures */
   @SuppressWarnings("unused")  // API
-  public static <D> D parseData(String name, Map<ResourceLocation,JsonElement> jsons, ResourceLocation location, JsonObject json, @Nullable Map<ResourceLocation,D> locationMap, RecordLoadable<D> dataLoader, TypedMap context) {
+  public static <D> D parseData(String name, Map<Identifier,JsonElement> jsons, Identifier location, JsonObject json, @Nullable Map<Identifier,D> locationMap, RecordLoadable<D> dataLoader, TypedMap context) {
     return parseData(name, jsons, location, json, locationMap, dataLoader, context, COPY_PARENT_DATA);
   }
 
   /** Parses the given entry into the relevant structures, allows overriding how the JSON merges */
-  public static <D> D parseData(String name, Map<ResourceLocation,JsonElement> jsons, ResourceLocation location, JsonObject json, @Nullable Map<ResourceLocation,D> locationMap, RecordLoadable<D> dataLoader, TypedMap context, BiConsumer<JsonObject,JsonObject> merger) {
+  public static <D> D parseData(String name, Map<Identifier,JsonElement> jsons, Identifier location, JsonObject json, @Nullable Map<Identifier,D> locationMap, RecordLoadable<D> dataLoader, TypedMap context, BiConsumer<JsonObject,JsonObject> merger) {
     // process any parents to get the final JSON to parse
     JsonFile resolved = processParents(name, jsons, new ArrayList<>(), location, json, merger);
 
@@ -140,7 +141,7 @@ public class RegistryDataMapLoader<R,D> extends SimpleJsonResourceReloadListener
   }
 
   /** Fetchs the parent from the JSON map for the given location */
-  public static JsonObject fetchParent(String name, Map<ResourceLocation,JsonElement> jsons, ResourceLocation parentLocation, ResourceLocation location, @Nullable List<ResourceLocation> loadingStack) {
+  public static JsonObject fetchParent(String name, Map<Identifier,JsonElement> jsons, Identifier parentLocation, Identifier location, @Nullable List<Identifier> loadingStack) {
     // first, ensure no circular dependency
     if (loadingStack != null) {
       loadingStack.add(location);
@@ -165,10 +166,10 @@ public class RegistryDataMapLoader<R,D> extends SimpleJsonResourceReloadListener
    * @param json          JSON object being parsed. May be modified to include data from the parent.
    * @return Pair of the location of the resolved parent and its JSON data.
    */
-  private static JsonFile processParents(String name, Map<ResourceLocation,JsonElement> jsons, List<ResourceLocation> loadingStack, ResourceLocation location, JsonObject json, BiConsumer<JsonObject,JsonObject> merger) {
+  private static JsonFile processParents(String name, Map<Identifier,JsonElement> jsons, List<Identifier> loadingStack, Identifier location, JsonObject json, BiConsumer<JsonObject,JsonObject> merger) {
     // process the parent until we no longer have one
     while (json.has("parent")) {
-      ResourceLocation parentLocation = JsonHelper.getResourceLocation(json, "parent");
+      Identifier parentLocation = JsonHelper.getIdentifier(json, "parent");
       JsonObject parentJson = fetchParent(name, jsons, parentLocation, location, loadingStack);
 
       // if the parent is the only key, treat this as a redirect, don't mutate the JSON, may have to resolve the parent again

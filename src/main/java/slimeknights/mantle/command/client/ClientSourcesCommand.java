@@ -7,8 +7,8 @@ import com.mojang.brigadier.suggestion.SuggestionProvider;
 import net.minecraft.client.Minecraft;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
-import net.minecraft.commands.arguments.ResourceLocationArgument;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.commands.arguments.IdentifierArgument;
+import net.minecraft.resources.Identifier;
 import slimeknights.mantle.command.SourcesCommand;
 import slimeknights.mantle.command.SourcesCommand.SourceFolder;
 
@@ -23,17 +23,17 @@ public class ClientSourcesCommand {
   /** Registers this command with the builder */
   public static void register(LiteralArgumentBuilder<CommandSourceStack> subCommand) {
     subCommand.then(Commands.literal("path")
-      .then(Commands.argument("path", ResourceLocationArgument.id())
-        .executes(context -> SourcesCommand.run(context, Minecraft.getInstance().getResourceManager(), ResourceLocationArgument.getId(context, "path")))));
+      .then(Commands.argument("path", IdentifierArgument.id())
+        .executes(context -> SourcesCommand.run(context, Minecraft.getInstance().getResourceManager(), IdentifierArgument.getId(context, "path")))));
     for (SourceFolder source : FOLDERS) {
       subCommand.then(Commands.literal(source.argument())
-        .then(Commands.argument("id", ResourceLocationArgument.id()).suggests(source.suggestionProvider())
-          .executes(context -> run(context, source.folder(), ResourceLocationArgument.getId(context, "id"), source.extension()))));
+        .then(Commands.argument("id", IdentifierArgument.id()).suggests(source.suggestionProvider())
+          .executes(context -> run(context, source.folder(), IdentifierArgument.getId(context, "id"), source.extension()))));
     }
   }
 
   /** Runs for the given folder and extension */
-  private static int run(CommandContext<CommandSourceStack> context, String folder, ResourceLocation id, String extension) throws CommandSyntaxException {
+  private static int run(CommandContext<CommandSourceStack> context, String folder, Identifier id, String extension) throws CommandSyntaxException {
     return SourcesCommand.run(context, Minecraft.getInstance().getResourceManager(), id.withPath(folder + '/' + id.getPath() + extension));
   }
 

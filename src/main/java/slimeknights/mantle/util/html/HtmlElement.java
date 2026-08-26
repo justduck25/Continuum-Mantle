@@ -1,7 +1,5 @@
 package slimeknights.mantle.util.html;
 
-import slimeknights.mantle.data.loadable.common.ColorLoadable;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -146,7 +144,7 @@ public class HtmlElement extends HtmlGroup {
 
   /** Adds a color element to the style */
   public HtmlElement color(String name, int color) {
-    return style(name, '#' + ColorLoadable.NO_ALPHA.getString(color));
+    return style(name, String.format("#%06X", color & 0xFFFFFF));
   }
 
   /** Adds the color element to the style */

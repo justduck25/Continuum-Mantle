@@ -3,7 +3,7 @@ package slimeknights.mantle.recipe.helper;
 import io.netty.handler.codec.DecoderException;
 import io.netty.handler.codec.EncoderException;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.crafting.Recipe;
 import net.minecraft.world.item.crafting.RecipeSerializer;
 import slimeknights.mantle.Mantle;
@@ -14,7 +14,7 @@ import javax.annotation.Nullable;
  * Recipe serializer that logs network exceptions before throwing them as otherwise the exceptions may be invisible
  * @param <T>  Recipe class
  */
-public interface LoggingRecipeSerializer<T extends Recipe<?>> extends RecipeSerializer<T> {
+public interface LoggingRecipeSerializer<T extends Recipe<?>> {
   /**
    * Read the recipe from the packet
    * @param id      Recipe ID
@@ -23,7 +23,7 @@ public interface LoggingRecipeSerializer<T extends Recipe<?>> extends RecipeSeri
    * @throws RuntimeException  If any errors happen, the exception will be logged automatically
    */
   @Nullable
-  T fromNetworkSafe(ResourceLocation id, FriendlyByteBuf buffer);
+  T fromNetworkSafe(Identifier id, FriendlyByteBuf buffer);
 
   /**
    * Write the method to the buffer
@@ -34,8 +34,7 @@ public interface LoggingRecipeSerializer<T extends Recipe<?>> extends RecipeSeri
   void toNetworkSafe(FriendlyByteBuf buffer, T recipe);
 
   @Nullable
-  @Override
-  default T fromNetwork(ResourceLocation id, FriendlyByteBuf buffer) {
+  default T fromNetwork(Identifier id, FriendlyByteBuf buffer) {
     try {
       return fromNetworkSafe(id, buffer);
     } catch (RuntimeException e) {
@@ -44,13 +43,11 @@ public interface LoggingRecipeSerializer<T extends Recipe<?>> extends RecipeSeri
       throw new DecoderException(error + " - " + e.getMessage(), e);
     }
   }
-
-  @Override
   default void toNetwork(FriendlyByteBuf buffer, T recipe) {
     try {
       toNetworkSafe(buffer, recipe);
     } catch (RuntimeException e) {
-      String error = this.getClass().getSimpleName() + ": Error writing recipe " + recipe.getId() + " of class " + recipe.getClass().getSimpleName() + " to packet";
+      String error = this.getClass().getSimpleName() + ": Error writing recipe " + recipe.getClass().getSimpleName() + " to packet";
       Mantle.logger.error("{}", error, e);
       throw new EncoderException(error + " - " + e.getMessage(), e);
     }

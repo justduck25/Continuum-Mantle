@@ -3,20 +3,31 @@ package slimeknights.mantle.client.model.builder;
 import com.google.gson.JsonObject;
 import lombok.Setter;
 import lombok.experimental.Accessors;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraftforge.client.model.generators.CustomLoaderBuilder;
-import net.minecraftforge.client.model.generators.ModelBuilder;
-import net.minecraftforge.common.data.ExistingFileHelper;
+import net.minecraft.resources.Identifier;
+import net.neoforged.neoforge.client.model.generators.template.CustomLoaderBuilder;
 import slimeknights.mantle.Mantle;
 
 /** Loader for {@link slimeknights.mantle.client.model.NBTKeyModel} */
 @Setter
 @Accessors(fluent = true)
-public class NBTKeyModelBuilder<T extends ModelBuilder<T>> extends CustomLoaderBuilder<T> {
+public class NBTKeyModelBuilder extends CustomLoaderBuilder {
   private String key = null;
-  private ResourceLocation extraTexturesKey = null;
-  public NBTKeyModelBuilder(ResourceLocation loaderId, T parent, ExistingFileHelper existingFileHelper) {
-    super(Mantle.getResource("nbt_key"), parent, existingFileHelper);
+  private Identifier extraTexturesKey = null;
+
+  public NBTKeyModelBuilder() {
+    this(Mantle.getResource("nbt_key"), false);
+  }
+
+  public NBTKeyModelBuilder(Identifier loaderId, boolean allowInlineElements) {
+    super(loaderId, allowInlineElements);
+  }
+
+  @Override
+  protected CustomLoaderBuilder copyInternal() {
+    NBTKeyModelBuilder copy = new NBTKeyModelBuilder(loaderId, allowInlineElements);
+    copy.key = this.key;
+    copy.extraTexturesKey = this.extraTexturesKey;
+    return copy;
   }
 
   @Override

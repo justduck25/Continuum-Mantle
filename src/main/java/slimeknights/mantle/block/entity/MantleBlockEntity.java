@@ -1,12 +1,14 @@
 package slimeknights.mantle.block.entity;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.storage.ValueOutput;
 
 import javax.annotation.Nullable;
 
@@ -17,28 +19,24 @@ public class MantleBlockEntity extends BlockEntity {
   }
 
   public boolean isClient() {
-    return this.getLevel() != null && this.getLevel().isClientSide;
+    return this.getLevel() != null && this.getLevel().isClientSide();
   }
 
   /**
-   * Marks the chunk dirty without performing comparator updates (twice!!) or block state checks
-   * Used since most of our markDirty calls only adjust TE data
+   * Marks the chunk dirty without performing comparator updates (twice!!) or block state checks.
+   * Used since most of our markDirty calls only adjust TE data.
    */
   @SuppressWarnings("deprecation")
   public void setChangedFast() {
-    if (level != null) {
-      if (level.hasChunkAt(worldPosition)) {
-        level.getChunkAt(worldPosition).setUnsaved(true);
-      }
+    if (level != null && level.hasChunkAt(worldPosition)) {
+      level.getChunkAt(worldPosition).markUnsaved();
     }
   }
-  
-  
+
   /* Syncing */
 
   /**
-   * If true, this TE syncs when {@link net.minecraft.world.level.Level#blockUpdated(BlockPos, Block) is called
-   * Syncs data from {@link #saveSynced(CompoundTag)}
+   * If true, this TE syncs when {@link net.minecraft.world.level.Level#blockUpdated(BlockPos, Block)} is called.
    */
   protected boolean shouldSyncOnUpdate() {
     return false;
@@ -47,26 +45,24 @@ public class MantleBlockEntity extends BlockEntity {
   @Override
   @Nullable
   public ClientboundBlockEntityDataPacket getUpdatePacket() {
-    // number is just used for vanilla, -1 ensures it skips all instanceof checks as its not a vanilla TE
     return shouldSyncOnUpdate() ? ClientboundBlockEntityDataPacket.create(this) : null;
   }
 
   /**
-   * Write to NBT that is synced to the client in {@link #getUpdateTag()} and in {@link #saveAdditional(CompoundTag)}
-   * @param nbt  NBT
+   * Write to NBT that is synced to the client in {@link #getUpdateTag(HolderLookup.Provider)}.
+   * Legacy child classes still fill a CompoundTag; persistence uses the new ValueOutput API separately.
    */
   protected void saveSynced(CompoundTag nbt) {}
 
   @Override
-  public CompoundTag getUpdateTag() {
-    CompoundTag nbt = new CompoundTag();
+  public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
+    CompoundTag nbt = super.getUpdateTag(registries);
     saveSynced(nbt);
     return nbt;
   }
 
   @Override
-  public void saveAdditional(CompoundTag nbt) {
-    super.saveAdditional(nbt);
-    saveSynced(nbt);
+  public void saveAdditional(ValueOutput output) {
+    super.saveAdditional(output);
   }
 }

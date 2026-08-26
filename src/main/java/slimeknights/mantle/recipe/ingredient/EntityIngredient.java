@@ -2,14 +2,14 @@ package slimeknights.mantle.recipe.ingredient;
 
 import com.google.common.collect.ImmutableSet;
 import com.google.gson.JsonElement;
-import lombok.RequiredArgsConstructor;
+import com.mojang.serialization.Codec;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.minecraftforge.common.ForgeSpawnEggItem;
+import net.minecraft.world.item.SpawnEggItem;
 import slimeknights.mantle.data.loadable.IAmLoadable;
 import slimeknights.mantle.data.loadable.Loadable;
 import slimeknights.mantle.data.loadable.Loadables;
@@ -20,7 +20,6 @@ import slimeknights.mantle.util.RegistryHelper;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
-import java.util.Objects;
 import java.util.Set;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -141,7 +140,7 @@ public abstract class EntityIngredient implements Predicate<EntityType<?>>, IAmL
   public List<ItemStack> getEggs() {
     if (eggs == null) {
       // use getDisplay to guarantee order is the same, just in case
-      eggs = getDisplay().stream().map(type -> new ItemStack(Objects.requireNonNullElse(ForgeSpawnEggItem.fromEntityType(type.type), Items.AIR))).toList();
+      eggs = getDisplay().stream().map(type -> new ItemStack(SpawnEggItem.byId(type.type).map(h -> h.value()).orElse(Items.AIR))).toList();
     }
     return eggs;
   }
@@ -151,9 +150,12 @@ public abstract class EntityIngredient implements Predicate<EntityType<?>>, IAmL
   /* Impls */
 
   /** Ingredient that matches any entity from a set */
-  @RequiredArgsConstructor
-  private static class SetMatch extends EntityIngredient {
+    private static class SetMatch extends EntityIngredient {
     private final Set<EntityType<?>> types;
+
+    private SetMatch(Set<EntityType<?>> types) {
+      this.types = types;
+    }
 
     @Override
     public Loadable<? extends EntityIngredient> loadable() {
@@ -172,9 +174,12 @@ public abstract class EntityIngredient implements Predicate<EntityType<?>>, IAmL
   }
 
   /** Ingredient that matches any entity from a tag */
-  @RequiredArgsConstructor
-  private static class TagMatch extends EntityIngredient {
+    private static class TagMatch extends EntityIngredient {
     private final TagKey<EntityType<?>> tag;
+
+    private TagMatch(TagKey<EntityType<?>> tag) {
+      this.tag = tag;
+    }
     private Set<EntityType<?>> types;
 
     @Override
@@ -184,7 +189,7 @@ public abstract class EntityIngredient implements Predicate<EntityType<?>>, IAmL
 
     @Override
     public boolean test(EntityType<?> type) {
-      return type.is(tag);
+      return BuiltInRegistries.ENTITY_TYPE.wrapAsHolder(type).is(tag);
     }
 
     @SuppressWarnings("deprecation")
@@ -198,9 +203,12 @@ public abstract class EntityIngredient implements Predicate<EntityType<?>>, IAmL
   }
 
   /** Ingredient combining multiple */
-  @RequiredArgsConstructor
-  private static class Compound extends EntityIngredient {
+    private static class Compound extends EntityIngredient {
     private final List<EntityIngredient> ingredients;
+
+    private Compound(List<EntityIngredient> ingredients) {
+      this.ingredients = ingredients;
+    }
     private Set<EntityType<?>> allTypes;
 
     @Override
@@ -231,6 +239,7 @@ public abstract class EntityIngredient implements Predicate<EntityType<?>>, IAmL
 
   /** Simple wrapper around entity type for usage in JEI */
   public record EntityInput(EntityType<?> type) {
+    public static final Codec<EntityInput> CODEC = BuiltInRegistries.ENTITY_TYPE.byNameCodec().xmap(EntityInput::new, EntityInput::type);
     /** Wraps the given list into a list of entity inputs */
     public static List<EntityInput> wrap(Collection<EntityType<?>> types) {
       return types.stream().map(EntityInput::new).toList();

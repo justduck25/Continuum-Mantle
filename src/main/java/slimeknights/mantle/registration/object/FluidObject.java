@@ -1,17 +1,18 @@
 package slimeknights.mantle.registration.object;
 
 import lombok.Getter;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraft.tags.FluidTags;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.Identifier;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.ItemLike;
 import net.minecraft.world.level.material.Fluid;
-import net.minecraftforge.fluids.FluidType;
+import net.neoforged.neoforge.fluids.FluidType;
 import slimeknights.mantle.Mantle;
 import slimeknights.mantle.recipe.helper.FluidOutput;
 import slimeknights.mantle.recipe.ingredient.FluidIngredient;
+
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -27,7 +28,7 @@ import java.util.function.Supplier;
 public class FluidObject<F extends Fluid> implements Supplier<F>, ItemLike, IdAwareObject {
   /** Fluid name, used for tag creation */
   @Getter @Nonnull
-  protected final ResourceLocation id;
+  protected final Identifier id;
 
   /** Tag in the forge namespace, crafting equivalence */
   @Getter @Nullable
@@ -36,9 +37,9 @@ public class FluidObject<F extends Fluid> implements Supplier<F>, ItemLike, IdAw
   private final Supplier<? extends F> still;
 
   /** Main constructor */
-  public FluidObject(ResourceLocation id, @Nullable String tagName, Supplier<? extends FluidType> type, Supplier<? extends F> still) {
+  public FluidObject(Identifier id, @Nullable String tagName, Supplier<? extends FluidType> type, Supplier<? extends F> still) {
     this.id = id;
-    this.commonTag = tagName == null ? null : FluidTags.create(Mantle.commonResource(tagName));
+    this.commonTag = tagName == null ? null : TagKey.create(Registries.FLUID, Mantle.commonResource(tagName));
     this.type = type;
     this.still = still;
   }
@@ -62,6 +63,15 @@ public class FluidObject<F extends Fluid> implements Supplier<F>, ItemLike, IdAw
    * @return  Bucket form, or null if no bucket
    * @see #asItem()
    */
+  /** Gets an output matching this fluid object for data generation. */
+  public FluidOutput result(int amount) {
+    return commonTag != null ? FluidOutput.fromTag(commonTag, amount) : FluidOutput.fromFluid(get(), amount);
+  }
+
+  /** Gets an ingredient matching this fluid object for data generation. */
+  public FluidIngredient ingredient(int amount) {
+    return commonTag != null ? FluidIngredient.of(commonTag, amount) : FluidIngredient.of(get(), amount);
+  }
   @Nullable
   public Item getBucket() {
     Item bucket = still.get().getBucket();
@@ -79,29 +89,5 @@ public class FluidObject<F extends Fluid> implements Supplier<F>, ItemLike, IdAw
   @Override
   public Item asItem() {
     return still.get().getBucket();
-  }
-
-  /**
-   * Creates an ingredient from this object
-   * @param amount     Ingredient amount
-   * @return  Ingredient instance
-   */
-  public FluidIngredient ingredient(int amount) {
-    if (commonTag != null) {
-      return FluidIngredient.of(commonTag, amount);
-    }
-    return FluidIngredient.of(get(), amount);
-  }
-
-  /**
-   * Creates a recipe result from this object
-   * @param amount     Result amount
-   * @return  Result instance
-   */
-  public FluidOutput result(int amount) {
-    if (commonTag != null) {
-      return FluidOutput.fromTag(commonTag, amount);
-    }
-    return FluidOutput.fromFluid(get(), amount);
   }
 }

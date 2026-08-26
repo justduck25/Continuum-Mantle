@@ -5,12 +5,14 @@ import com.google.gson.JsonObject;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.RequiredArgsConstructor;
+import net.minecraft.core.Holder;
+import net.minecraft.core.component.DataComponentMap;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.material.Fluids;
-import net.minecraftforge.fluids.FluidStack;
+import net.neoforged.neoforge.fluids.FluidStack;
 import slimeknights.mantle.data.loadable.IAmLoadable;
 import slimeknights.mantle.data.loadable.Loadable;
 import slimeknights.mantle.data.loadable.Loadables;
@@ -32,6 +34,12 @@ import java.util.stream.Collectors;
 public abstract class FluidIngredient implements IAmLoadable {
   /** Empty fluid ingredient, matching empty stacks. This ingredient does not parse from JSON, use use defaulting methods if you wish to use it */
   public static final FluidMatch EMPTY = new FluidMatch(Fluids.EMPTY, 0);
+
+  /** Creates a fluid stack without requiring bound registry components during datagen bootstrap. */
+  private static FluidStack stack(Fluid fluid, int amount) {
+    Holder.Reference<Fluid> holder = fluid.builtInRegistryHolder();
+    return holder.isBound() ? new FluidStack(holder, amount) : new FluidStack(Holder.direct(fluid, DataComponentMap.EMPTY), amount);
+  }
 
 
   /* Loadables */
@@ -214,7 +222,7 @@ public abstract class FluidIngredient implements IAmLoadable {
 
     @Override
     public List<FluidStack> getAllFluids() {
-      return Collections.singletonList(new FluidStack(fluid, amount));
+      return Collections.singletonList(stack(fluid, amount));
     }
   }
 
@@ -246,7 +254,7 @@ public abstract class FluidIngredient implements IAmLoadable {
     @Override
     public List<FluidStack> getAllFluids() {
       return RegistryHelper.getTagValueStream(BuiltInRegistries.FLUID, tag)
-                          .map(fluid -> new FluidStack(fluid, amount))
+                          .map(fluid -> stack(fluid, amount))
                           .toList();
     }
   }

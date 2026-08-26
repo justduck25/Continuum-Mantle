@@ -8,7 +8,7 @@ import com.google.gson.JsonParseException;
 import com.google.gson.JsonSerializationContext;
 import com.google.gson.JsonSerializer;
 import com.google.gson.JsonSyntaxException;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.util.GsonHelper;
 import slimeknights.mantle.data.gson.GenericRegisteredSerializer.IJsonSerializable;
 import slimeknights.mantle.data.registry.GenericLoaderRegistry;
@@ -29,17 +29,17 @@ public class GenericRegisteredSerializer<T extends IJsonSerializable> implements
    * Map of all serializers for implementations.
    * TODO 1.19: would using {@link NamedComponentRegistry} make this implemention simplier?
    */
-  private final Map<ResourceLocation,JsonDeserializer<? extends T>> deserializers = new HashMap<>();
+  private final Map<Identifier,JsonDeserializer<? extends T>> deserializers = new HashMap<>();
 
   /** Registers a deserializer by name */
-  public void registerDeserializer(ResourceLocation name, JsonDeserializer<? extends T> jsonDeserializer) {
+  public void registerDeserializer(Identifier name, JsonDeserializer<? extends T> jsonDeserializer) {
     deserializers.put(name, jsonDeserializer);
   }
 
   @Override
   public T deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context) throws JsonParseException {
     JsonObject object = GsonHelper.convertToJsonObject(json, "transformer");
-    ResourceLocation type = JsonHelper.getResourceLocation(object, "type");
+    Identifier type = JsonHelper.getIdentifier(object, "type");
     JsonDeserializer<? extends T> deserializer = deserializers.get(type);
     if (deserializer == null) {
       throw new JsonSyntaxException("Unknown serializer " + type);
@@ -54,7 +54,7 @@ public class GenericRegisteredSerializer<T extends IJsonSerializable> implements
       throw new IllegalArgumentException("Invalid serialized object, missing type");
     }
     String typeStr = GsonHelper.getAsString(serialized, "type");
-    ResourceLocation typeRL = ResourceLocation.tryParse(typeStr);
+    Identifier typeRL = Identifier.tryParse(typeStr);
     if (typeRL == null) {
       throw new IllegalArgumentException("Invalid object type '" + typeStr + '\'');
     }

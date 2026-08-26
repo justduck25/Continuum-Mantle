@@ -1,38 +1,19 @@
-// Credit to Immersive Engineering and blusunrize for this class
-// See: https://github.com/BluSunrize/ImmersiveEngineering/blob/1.18/src/main/java/blusunrize/immersiveengineering/common/util/fakeworld/TemplateWorld.java
 package slimeknights.mantle.client.book.structure.level;
 
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.block.BlockAndTintGetter;
+import net.minecraft.world.level.CardinalLighting;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Direction;
-import net.minecraft.core.Holder;
-import net.minecraft.core.registries.Registries;
-import net.minecraft.sounds.SoundEvent;
-import net.minecraft.sounds.SoundSource;
-import net.minecraft.util.profiling.InactiveProfiler;
-import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.flag.FeatureFlagSet;
-import net.minecraft.world.item.crafting.RecipeManager;
-import net.minecraft.world.level.Level;
-import net.minecraft.world.level.biome.Biome;
-import net.minecraft.world.level.biome.Biomes;
-import net.minecraft.world.level.block.Block;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.world.level.ColorResolver;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.chunk.ChunkSource;
-import net.minecraft.world.level.dimension.BuiltinDimensionTypes;
-import net.minecraft.world.level.entity.LevelEntityGetter;
-import net.minecraft.world.level.gameevent.GameEvent;
-import net.minecraft.world.level.gameevent.GameEvent.Context;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplate.StructureBlockInfo;
-import net.minecraft.world.level.material.Fluid;
-import net.minecraft.world.level.saveddata.maps.MapItemSavedData;
-import net.minecraft.world.phys.Vec3;
-import net.minecraft.world.scores.Scoreboard;
-import net.minecraft.world.ticks.BlackholeTickAccess;
-import net.minecraft.world.ticks.LevelTickAccess;
+import net.minecraft.world.level.lighting.LevelLightEngine;
+import net.minecraft.world.level.material.FluidState;
 
-import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.HashMap;
 import java.util.List;
@@ -40,125 +21,74 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.function.Predicate;
 
-/**
- * World implementation for the book structures
- */
-public class TemplateLevel extends Level {
-
-  private final Map<String, MapItemSavedData> maps = new HashMap<>();
-  private final Scoreboard scoreboard = new Scoreboard();
-  private final RecipeManager recipeManager = new RecipeManager();
-  private final TemplateChunkSource chunkSource;
+/** Lightweight block view used to render structure previews in books. */
+public class TemplateLevel implements BlockAndTintGetter {
+  private final Map<BlockPos, StructureBlockInfo> blocks = new HashMap<>();
+  private final Map<BlockPos, BlockEntity> blockEntities = new HashMap<>();
+  private final Predicate<BlockPos> shouldShow;
 
   public TemplateLevel(List<StructureBlockInfo> blocks, Predicate<BlockPos> shouldShow) {
-    super(
-      new FakeLevelData(), Level.OVERWORLD, Objects.requireNonNull(Minecraft.getInstance().level).registryAccess(),
-      Objects.requireNonNull(Minecraft.getInstance().level).registryAccess().registryOrThrow(Registries.DIMENSION_TYPE).getHolderOrThrow(BuiltinDimensionTypes.OVERWORLD),
-      () -> InactiveProfiler.INSTANCE, true, false, 0, 0
-    );
-
-    this.chunkSource = new TemplateChunkSource(blocks, this, shouldShow);
+    this.shouldShow = shouldShow;
+    var registryAccess = Objects.requireNonNull(Minecraft.getInstance().level).registryAccess();
+    for (StructureBlockInfo info : blocks) {
+      this.blocks.put(info.pos(), info);
+      CompoundTag tag = info.nbt();
+      if (tag != null) {
+        BlockEntity blockEntity = BlockEntity.loadStatic(info.pos(), info.state(), tag, registryAccess);
+        if (blockEntity != null) {
+          this.blockEntities.put(info.pos(), blockEntity);
+        }
+      }
+    }
   }
 
   @Override
-  public void sendBlockUpdated(@Nonnull BlockPos pos, @Nonnull BlockState oldState, @Nonnull BlockState newState, int flags) {}
+  public CardinalLighting cardinalLighting() {
+    return CardinalLighting.DEFAULT;
+  }
 
   @Override
-  public void playSeededSound(@Nullable Player pPlayer, double pX, double pY, double pZ, Holder<SoundEvent> pSound, SoundSource pSource, float pVolume, float pPitch, long pSeed) {}
+  public LevelLightEngine getLightEngine() {
+    return LevelLightEngine.EMPTY;
+  }
 
   @Override
-  public void playSeededSound(@Nullable Player pPlayer, Entity pEntity, Holder<SoundEvent> pSound, SoundSource pCategory, float pVolume, float pPitch, long pSeed) {}
-
-  @Override
-  public String gatherChunkSourceStats() {
-    return chunkSource.gatherStats();
+  public int getBlockTint(BlockPos pos, ColorResolver color) {
+    return -1;
   }
 
   @Nullable
   @Override
-  public Entity getEntity(int id) {
-    return null;
-  }
-
-  @Nullable
-  @Override
-  public MapItemSavedData getMapData(@Nonnull String mapName) {
-    return this.maps.get(mapName);
+  public BlockEntity getBlockEntity(BlockPos pos) {
+    if (!this.shouldShow.test(pos)) {
+      return null;
+    }
+    return this.blockEntities.get(pos);
   }
 
   @Override
-  public void setMapData(String mapId, MapItemSavedData mapDataIn) {
-    this.maps.put(mapId, mapDataIn);
+  public BlockState getBlockState(BlockPos pos) {
+    if (this.shouldShow.test(pos)) {
+      StructureBlockInfo info = this.blocks.get(pos);
+      if (info != null) {
+        return info.state();
+      }
+    }
+    return Blocks.VOID_AIR.defaultBlockState();
   }
 
   @Override
-  public int getFreeMapId() {
-    return this.maps.size();
+  public FluidState getFluidState(BlockPos pos) {
+    return this.getBlockState(pos).getFluidState();
   }
 
   @Override
-  public void destroyBlockProgress(int breakerId, @Nonnull BlockPos pos, int progress) {}
-
-  @Nonnull
-  @Override
-  public Scoreboard getScoreboard() {
-    return this.scoreboard;
-  }
-
-  @Nonnull
-  @Override
-  public RecipeManager getRecipeManager() {
-    return this.recipeManager;
+  public int getHeight() {
+    return 384;
   }
 
   @Override
-  protected LevelEntityGetter<Entity> getEntities() {
-    return FakeEntityGetter.INSTANCE;
-  }
-
-  @Nonnull
-  @Override
-  public LevelTickAccess<Block> getBlockTicks() {
-    return BlackholeTickAccess.emptyLevelList();
-  }
-
-  @Nonnull
-  @Override
-  public LevelTickAccess<Fluid> getFluidTicks() {
-    return BlackholeTickAccess.emptyLevelList();
-  }
-
-  @Nonnull
-  @Override
-  public ChunkSource getChunkSource() {
-    return this.chunkSource;
-  }
-
-  @Override
-  public void levelEvent(@Nullable Player player, int type, @Nonnull BlockPos pos, int data) {}
-
-  @Override
-  public void gameEvent(GameEvent pEvent, Vec3 pPosition, Context pContext) {}
-
-  @Override
-  public FeatureFlagSet enabledFeatures() {
-    return FeatureFlagSet.of();
-  }
-
-  @Override
-  public float getShade(@Nonnull Direction p_230487_1_, boolean p_230487_2_) {
-    return 1;
-  }
-
-  @Nonnull
-  @Override
-  public List<? extends Player> players() {
-    return List.of();
-  }
-
-  @Nonnull
-  @Override
-  public Holder<Biome> getUncachedNoiseBiome(int x, int y, int z) {
-    return registryAccess().registryOrThrow(Registries.BIOME).getHolderOrThrow(Biomes.PLAINS);
+  public int getMinY() {
+    return -64;
   }
 }

@@ -1,7 +1,7 @@
 package slimeknights.mantle.registration.adapter;
 
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.data.models.blockstates.PropertyDispatch.TriFunction;
+
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.item.BlockItem;
@@ -14,8 +14,9 @@ import net.minecraft.world.item.SignItem;
 import net.minecraft.world.item.SpawnEggItem;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.material.Fluid;
-import net.minecraftforge.common.ForgeSpawnEggItem;
-import net.minecraftforge.registries.IForgeRegistry;
+
+import net.minecraft.resources.Identifier;
+import java.util.function.BiConsumer;
 import slimeknights.mantle.item.BlockTooltipItem;
 import slimeknights.mantle.item.BurnableBlockItem;
 import slimeknights.mantle.item.BurnableHangingSignItem;
@@ -40,14 +41,18 @@ import java.util.function.Supplier;
  */
 @SuppressWarnings({"unused", "WeakerAccess", "UnusedReturnValue"})
 public class ItemRegistryAdapter extends EnumRegistryAdapter<Item> {
+  public interface TriFunction<T, U, V, R> {
+    R apply(T t, U u, V v);
+  }
+
   private final Item.Properties defaultProps;
 
   /**
    * Registers a new item registry adapter with default mod ID and item properties
    * @param registry  Item registry instance
    */
-  public ItemRegistryAdapter(IForgeRegistry<Item> registry) {
-    this(registry, null);
+  public ItemRegistryAdapter(BiConsumer<Identifier, Item> register) {
+    this(register, null);
   }
 
   /**
@@ -55,8 +60,8 @@ public class ItemRegistryAdapter extends EnumRegistryAdapter<Item> {
    * @param registry      Item registry instance
    * @param defaultProps  Default item properties
    */
-  public ItemRegistryAdapter(IForgeRegistry<Item> registry, @Nullable Item.Properties defaultProps) {
-    super(registry);
+  public ItemRegistryAdapter(BiConsumer<Identifier, Item> register, @Nullable Item.Properties defaultProps) {
+    super(register);
     this.defaultProps = Objects.requireNonNullElseGet(defaultProps, Properties::new);
   }
 
@@ -66,8 +71,8 @@ public class ItemRegistryAdapter extends EnumRegistryAdapter<Item> {
    * @param modid         Mod ID override
    * @param defaultProps  Default item properties
    */
-  public ItemRegistryAdapter(IForgeRegistry<Item> registry, String modid, @Nullable Item.Properties defaultProps) {
-    super(registry, modid);
+  public ItemRegistryAdapter(BiConsumer<Identifier, Item> register, String modid, @Nullable Item.Properties defaultProps) {
+    super(register, modid);
     this.defaultProps = Objects.requireNonNullElseGet(defaultProps, Properties::new);
   }
 
@@ -202,7 +207,7 @@ public class ItemRegistryAdapter extends EnumRegistryAdapter<Item> {
     } else {
       burnableItem = (block, burnTime) -> new BlockItem(block, defaultProps);
       burnableTallItem = (block) -> new DoubleHighBlockItem(block, defaultProps);
-      burnableSignItem = SignItem::new;
+      burnableSignItem = (props, standing, wall) -> new SignItem(standing, wall, props);
       burnableHangingSignItem = (props, ceiling, wall) -> new HangingSignItem(ceiling, wall, props);
     }
 
@@ -264,7 +269,7 @@ public class ItemRegistryAdapter extends EnumRegistryAdapter<Item> {
    * @return  Bucket instance
    */
   public BucketItem registerBucket(Supplier<? extends Fluid> fluid, String baseName) {
-    return register(new BucketItem(fluid, RegistrationHelper.BUCKET_PROPS), baseName + "_bucket");
+    return register(new BucketItem(fluid.get(), RegistrationHelper.BUCKET_PROPS), baseName + "_bucket");
   }
 
   /**
@@ -276,6 +281,6 @@ public class ItemRegistryAdapter extends EnumRegistryAdapter<Item> {
    * @return  Spawn egg item instance
    */
   public SpawnEggItem registerSpawnEgg(Supplier<? extends EntityType<? extends Mob>> type, int primary, int secondary, String baseName) {
-    return register(new ForgeSpawnEggItem(type, primary, secondary, new Properties()), baseName + "_spawn_egg");
+    return register(new SpawnEggItem(new Properties()), baseName + "_spawn_egg");
   }
 }

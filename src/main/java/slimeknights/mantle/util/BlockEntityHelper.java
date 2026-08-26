@@ -91,6 +91,6 @@ public class BlockEntityHelper {
   /** Handles the unchecked cast for a block entity ticker */
   @Nullable
   public static <HAVE extends BlockEntity, RET extends BlockEntity> BlockEntityTicker<RET> serverTicker(Level level, BlockEntityType<RET> expected, BlockEntityType<HAVE> have, BlockEntityTicker<? super HAVE> ticker) {
-    return level.isClientSide ? null : castTicker(expected, have, ticker);
+    return level.isClientSide() ? null : castTicker(expected, have, ticker);
   }
 }

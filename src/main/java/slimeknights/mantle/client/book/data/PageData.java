@@ -1,10 +1,10 @@
 package slimeknights.mantle.client.book.data;
 
 import com.google.gson.JsonElement;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.resources.Resource;
-import net.minecraftforge.common.crafting.conditions.ICondition;
-import net.minecraftforge.common.crafting.conditions.TrueCondition;
+import net.neoforged.neoforge.common.conditions.ICondition;
+import net.neoforged.neoforge.common.conditions.AlwaysCondition;
 import slimeknights.mantle.Mantle;
 import slimeknights.mantle.client.book.BookLoader;
 import slimeknights.mantle.client.book.data.content.ContentError;
@@ -24,13 +24,13 @@ import java.util.Map;
 public class PageData implements IDataItem, IConditional {
 
   public String name = null;
-  public ResourceLocation type = Mantle.getResource("blank");
+  public Identifier type = Mantle.getResource("blank");
   public String data = "";
   public float scale = 1.0F;
-  public ICondition condition = TrueCondition.INSTANCE;
+  public ICondition condition = AlwaysCondition.INSTANCE;
 
   /** Contains arbitrary data to be used by custom transformers and other things */
-  public Map<ResourceLocation, JsonElement> extraData = Collections.emptyMap();
+  public Map<Identifier, JsonElement> extraData = Collections.emptyMap();
 
   public transient SectionData parent;
   public transient BookRepository source;
@@ -63,7 +63,7 @@ public class PageData implements IDataItem, IConditional {
     Class<? extends PageContent> ctype = BookLoader.getPageType(type);
 
     if (!this.data.isEmpty() && !this.data.equals("no-load")) {
-      Resource pageInfo = this.source.getResource(this.source.getResourceLocation(this.data));
+      Resource pageInfo = this.source.getResource(this.source.getIdentifier(this.data));
       if (pageInfo != null) {
         String data = this.source.resourceToString(pageInfo);
         if (!data.isEmpty()) {
@@ -176,6 +176,6 @@ public class PageData implements IDataItem, IConditional {
   }
 
   private static class PageTypeOverrider {
-    public ResourceLocation type;
+    public Identifier type;
   }
 }

@@ -6,7 +6,7 @@ import com.google.gson.JsonPrimitive;
 import com.google.gson.JsonSyntaxException;
 import lombok.Getter;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import slimeknights.mantle.Mantle;
 import slimeknights.mantle.data.gson.GenericRegisteredSerializer;
 import slimeknights.mantle.data.loadable.field.RecordField;
@@ -64,13 +64,13 @@ public class GenericLoaderRegistry<T extends IHaveLoader> implements RecordLoada
   }
 
   /** Registers a deserializer by name */
-  public void register(ResourceLocation name, RecordLoadable<? extends T> loader) {
+  public void register(Identifier name, RecordLoadable<? extends T> loader) {
     loaders.register(name, loader);
   }
 
   /** Returns the name of a registered loader, or null if it is unregistered */
   @Nullable
-  public ResourceLocation getName(RecordLoadable<? extends T> loader) {
+  public Identifier getName(RecordLoadable<? extends T> loader) {
     return loaders.getOptionalKey(loader);
   }
 

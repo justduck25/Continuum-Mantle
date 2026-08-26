@@ -3,6 +3,7 @@ package slimeknights.mantle.recipe.container;
 import net.minecraft.world.Container;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.crafting.RecipeInput;
 
 /**
  * {@link Container} extension for a recipe that only needs read access.

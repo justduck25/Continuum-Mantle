@@ -2,7 +2,7 @@ package slimeknights.mantle.client.screen.book.element;
 
 import com.google.common.collect.Lists;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import slimeknights.mantle.client.book.data.element.TextData;
 
 /** Element within a {@link slimeknights.mantle.client.book.data.content.ContentListing} */
@@ -30,7 +30,7 @@ public class ListingLeftElement extends TextElement {
   }
 
   @Override
-  public void draw(GuiGraphics matrices, int mouseX, int mouseY, float partialTicks, Font fontRenderer) {
+  public void draw(GuiGraphicsExtractor matrices, int mouseX, int mouseY, float partialTicks, Font fontRenderer) {
     if (isClickable) {
       if (this.isHovered(mouseX, mouseY)) {
         // update bullet

@@ -1,6 +1,6 @@
 package slimeknights.mantle.data.listener;
 
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.resources.ResourceManager;
 
 import java.util.Set;
@@ -9,11 +9,11 @@ import java.util.stream.Collectors;
 
 /** Utility that handles checking if a resource exists in any resource pack. */
 @SuppressWarnings("unused")  // API
-public class ResourceValidator implements IEarlySafeManagerReloadListener, Predicate<ResourceLocation> {
+public class ResourceValidator implements IEarlySafeManagerReloadListener, Predicate<Identifier> {
   private final String folder;
   private final int trim;
   private final String extension;
-  protected Set<ResourceLocation> resources;
+  protected Set<Identifier> resources;
 
   /**
    * Gets a resource validator instance
@@ -36,12 +36,12 @@ public class ResourceValidator implements IEarlySafeManagerReloadListener, Predi
       return loc.getPath().endsWith(extension);
     }).keySet().stream().map((location) -> {
       String path = location.getPath();
-      return new ResourceLocation(location.getNamespace(), path.substring(trim, path.length() - extensionLength));
+      return Identifier.fromNamespaceAndPath(location.getNamespace(), path.substring(trim, path.length() - extensionLength));
     }).collect(Collectors.toUnmodifiableSet());
   }
 
   @Override
-  public boolean test(ResourceLocation location) {
+  public boolean test(Identifier location) {
     return resources.contains(location);
   }
 

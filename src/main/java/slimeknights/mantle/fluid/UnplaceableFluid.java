@@ -15,7 +15,7 @@ import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
-import net.minecraftforge.fluids.FluidType;
+import net.neoforged.neoforge.fluids.FluidType;
 import org.jetbrains.annotations.Nullable;
 import slimeknights.mantle.registration.FluidBuilder;
 
@@ -44,9 +44,6 @@ public class UnplaceableFluid extends Fluid {
   public UnplaceableFluid(Supplier<? extends FluidType> type, @Nullable Supplier<? extends Item> bucket) {
     this(type, bucket, 100, 5);
   }
-
-
-  @Override
   public FluidType getFluidType() {
     return type.get();
   }

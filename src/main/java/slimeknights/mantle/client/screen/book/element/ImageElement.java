@@ -1,13 +1,19 @@
 package slimeknights.mantle.client.screen.book.element;
 
-import com.mojang.blaze3d.vertex.PoseStack;
+import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.renderer.RenderPipelines;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.client.renderer.texture.TextureManager;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.client.renderer.RenderPipelines;
+import net.minecraft.resources.Identifier;
+import net.minecraft.client.renderer.RenderPipelines;
 import slimeknights.mantle.client.book.data.element.ImageData;
+import net.minecraft.client.renderer.RenderPipelines;
 import slimeknights.mantle.client.screen.book.BookScreen;
 
+import net.minecraft.client.renderer.RenderPipelines;
 import static java.util.Objects.requireNonNullElse;
 
 public class ImageElement extends SizedBookElement {
@@ -70,26 +76,17 @@ public class ImageElement extends SizedBookElement {
   }
 
   @Override
-  public void draw(GuiGraphics graphics, int mouseX, int mouseY, float partialTicks, Font fontRenderer) {
-    float r = ((this.colorMultiplier >> 16) & 0xff) / 255.F;
-    float g = ((this.colorMultiplier >> 8) & 0xff) / 255.F;
-    float b = (this.colorMultiplier & 0xff) / 255.F;
-    graphics.setColor(r, g, b, 1f);
-
+  public void draw(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTicks, Font fontRenderer) {
     if (this.image.item == null) {
-      ResourceLocation texture = requireNonNullElse(this.image.location, TextureManager.INTENTIONAL_MISSING_TEXTURE);
-      graphics.blit(texture, this.x, this.y, this.width, this.height, this.image.u, this.image.v, this.image.uw, this.image.vh, this.image.texWidth, this.image.texHeight);
-    }
-    else {
-      PoseStack matrices = graphics.pose();
-      matrices.pushPose();
-      matrices.translate(this.x, this.y, 0F);
-      matrices.scale(this.width / 16F, this.height / 16F, 1F);
-
+      Identifier texture = requireNonNullElse(this.image.location, TextureManager.INTENTIONAL_MISSING_TEXTURE);
+      graphics.blit(RenderPipelines.GUI_TEXTURED, texture, this.x, this.y, this.image.u, this.image.v, this.width, this.height, this.image.uw, this.image.vh, this.image.texWidth, this.image.texHeight, this.colorMultiplier | 0xFF000000);
+    } else {
+      var matrices = graphics.pose();
+      matrices.pushMatrix();
+      matrices.translate(this.x, this.y);
+      matrices.scale(this.width / 16F, this.height / 16F);
       this.itemElement.draw(graphics, mouseX, mouseY, partialTicks, fontRenderer);
-
-      matrices.popPose();
+      matrices.popMatrix();
     }
-    graphics.setColor(1, 1, 1, 1);
   }
 }

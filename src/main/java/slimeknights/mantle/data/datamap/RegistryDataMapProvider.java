@@ -5,7 +5,7 @@ import net.minecraft.core.Registry;
 import net.minecraft.data.CachedOutput;
 import net.minecraft.data.PackOutput;
 import net.minecraft.data.PackOutput.Target;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import slimeknights.mantle.data.GenericDataProvider;
 import slimeknights.mantle.data.loadable.record.RecordLoadable;
 
@@ -20,7 +20,7 @@ public abstract class RegistryDataMapProvider<R,D> extends GenericDataProvider {
   private final Registry<R> registry;
   private final RecordLoadable<D> dataLoader;
   private final String modId;
-  private final Map<ResourceLocation,Supplier<JsonObject>> entries = new HashMap<>();
+  private final Map<Identifier,Supplier<JsonObject>> entries = new HashMap<>();
 
   public RegistryDataMapProvider(PackOutput output, Target type, Registry<R> registry, RecordLoadable<D> dataLoader, String folder, String modId) {
     super(output, type, folder);
@@ -46,17 +46,17 @@ public abstract class RegistryDataMapProvider<R,D> extends GenericDataProvider {
   /* Provider helpers */
 
   /** Makes a location from a path */
-  protected ResourceLocation key(String name) {
-    return new ResourceLocation(modId, name);
+  protected Identifier key(String name) {
+    return Identifier.fromNamespaceAndPath(modId, name);
   }
 
   /** Makes a location from a registry entry */
-  protected ResourceLocation key(R entry) {
+  protected Identifier key(R entry) {
     return Objects.requireNonNull(registry.getKey(entry));
   }
 
   /** Makes a location from a registry entry */
-  protected ResourceLocation key(Supplier<? extends R> entry) {
+  protected Identifier key(Supplier<? extends R> entry) {
     return key(entry.get());
   }
 
@@ -64,7 +64,7 @@ public abstract class RegistryDataMapProvider<R,D> extends GenericDataProvider {
   /* Basic supplier methods */
 
   /** Adds an entry to the provider */
-  protected void entry(ResourceLocation key, Supplier<JsonObject> json) {
+  protected void entry(Identifier key, Supplier<JsonObject> json) {
     Supplier<JsonObject> original = entries.putIfAbsent(key, json);
     if (original != null) {
       throw new IllegalArgumentException("Duplicate entry at " + key + ", original " + original + ", new value " + json);
@@ -75,7 +75,7 @@ public abstract class RegistryDataMapProvider<R,D> extends GenericDataProvider {
   /* Redirects */
 
   /** Adds a redirect to the provider */
-  protected void redirect(ResourceLocation key, ResourceLocation parent) {
+  protected void redirect(Identifier key, Identifier parent) {
     entry(key, () -> {
       JsonObject json = new JsonObject();
       json.addProperty("parent", parent.toString());
@@ -84,17 +84,17 @@ public abstract class RegistryDataMapProvider<R,D> extends GenericDataProvider {
   }
 
   /** Adds a redirect to the provider */
-  protected void redirect(String key, ResourceLocation parent) {
+  protected void redirect(String key, Identifier parent) {
     redirect(key(key), parent);
   }
 
   /** Adds a redirect to the provider */
-  protected void redirect(R key, ResourceLocation parent) {
+  protected void redirect(R key, Identifier parent) {
     redirect(key(key), parent);
   }
 
   /** Adds a redirect to the provider */
-  protected void redirect(Supplier<? extends R> key, ResourceLocation parent) {
+  protected void redirect(Supplier<? extends R> key, Identifier parent) {
     redirect(key(key), parent);
   }
 
@@ -117,7 +117,7 @@ public abstract class RegistryDataMapProvider<R,D> extends GenericDataProvider {
   /* Data entry methods */
 
   /** Adds a full data object to the provider */
-  protected void entry(ResourceLocation key, D data) {
+  protected void entry(Identifier key, D data) {
     entry(key, new DataEntry<>(dataLoader, data));
   }
 

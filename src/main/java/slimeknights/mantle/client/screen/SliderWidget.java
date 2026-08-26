@@ -1,6 +1,6 @@
 package slimeknights.mantle.client.screen;
 
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.util.Mth;
 
 // a vertical slider!
@@ -116,7 +116,7 @@ public class SliderWidget extends Widget {
   }
 
   @Override
-  public void draw(GuiGraphics graphics) {
+  public void draw(GuiGraphicsExtractor graphics) {
     if (this.hidden) {
       return;
     }

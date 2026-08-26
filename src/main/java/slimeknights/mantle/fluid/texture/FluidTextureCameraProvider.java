@@ -1,9 +1,9 @@
 package slimeknights.mantle.fluid.texture;
 
 import net.minecraft.data.PackOutput;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraftforge.common.data.ExistingFileHelper;
-import net.minecraftforge.fluids.FluidType;
+import net.minecraft.resources.Identifier;
+import net.minecraft.server.packs.resources.ResourceManager;
+import net.neoforged.neoforge.fluids.FluidType;
 import slimeknights.mantle.data.client.DeanimateTextureGenerator;
 
 import java.util.Map.Entry;
@@ -15,14 +15,14 @@ public class FluidTextureCameraProvider extends DeanimateTextureGenerator {
   /** Fluid types from the provider to ignore */
   private final Set<FluidType> skip;
 
-  public FluidTextureCameraProvider(PackOutput packOutput, ExistingFileHelper existingFileHelper, AbstractFluidTextureProvider provider, Set<FluidType> skip) {
-    super(packOutput, existingFileHelper);
+  public FluidTextureCameraProvider(PackOutput packOutput, ResourceManager resourceManager, AbstractFluidTextureProvider provider, Set<FluidType> skip) {
+    super(packOutput, resourceManager);
     this.provider = provider;
     this.skip = skip;
   }
 
-  public FluidTextureCameraProvider(PackOutput packOutput, ExistingFileHelper existingFileHelper, AbstractFluidTextureProvider provider) {
-    this(packOutput, existingFileHelper, provider, Set.of());
+  public FluidTextureCameraProvider(PackOutput packOutput, ResourceManager resourceManager, AbstractFluidTextureProvider provider) {
+    this(packOutput, resourceManager, provider, Set.of());
   }
 
   @Override
@@ -30,7 +30,7 @@ public class FluidTextureCameraProvider extends DeanimateTextureGenerator {
     for (Entry<FluidType, FluidTexture.Builder> entry : provider.getAllTextures().entrySet()) {
       if (!skip.contains(entry.getKey())) {
         FluidTexture.Builder builder = entry.getValue();
-        ResourceLocation camera = builder.getCamera();
+        Identifier camera = builder.getCamera();
         if (camera != null) {
           deanimate(builder.getStill(), camera);
         }

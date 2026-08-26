@@ -2,6 +2,7 @@ package slimeknights.mantle.data.predicate.item;
 
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.Item;
+import slimeknights.mantle.Mantle;
 import slimeknights.mantle.data.loadable.Loadables;
 import slimeknights.mantle.data.loadable.record.RecordLoadable;
 import slimeknights.mantle.data.loadable.record.SingletonLoader;
@@ -45,9 +46,19 @@ public interface ItemPredicate extends IJsonPredicate<Item> {
 
   /** Predicate matching any items with a remainder after crafting. */
   @SuppressWarnings("deprecation")
-  ItemPredicate HAS_CONTAINER = simple(Item::hasCraftingRemainingItem);
+  ItemPredicate HAS_CONTAINER = simple(item -> item.getCraftingRemainder() != null);
   /** Predicate matching any items with fluid transfer registered with {@link FluidContainerTransferManager} */
   ItemPredicate MAY_HAVE_TRANSFER = simple(FluidContainerTransferManager.INSTANCE::mayHaveTransfer);
+  /** Registers builtin singleton predicates for serialization. */
+  @SuppressWarnings("unused")
+  boolean REGISTER_BUILTINS = registerBuiltins();
+
+  /** Registers builtin singleton predicates for serialization. */
+  static boolean registerBuiltins() {
+    LOADER.register(Mantle.getResource("has_container"), HAS_CONTAINER.getLoader());
+    LOADER.register(Mantle.getResource("may_have_transfer"), MAY_HAVE_TRANSFER.getLoader());
+    return true;
+  }
 
 
   /* Helper methods */

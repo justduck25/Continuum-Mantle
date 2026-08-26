@@ -1,25 +1,25 @@
 package slimeknights.mantle.client.book.data.content;
 
+import java.util.ArrayList;
+import java.util.List;
+import javax.annotation.Nullable;
 import lombok.Getter;
 import net.minecraft.ChatFormatting;
-import net.minecraft.Util;
-import slimeknights.mantle.Mantle;
+import net.minecraft.network.chat.FormattedText;
+import net.minecraft.util.Util;
 import slimeknights.mantle.client.book.data.BookData;
+import slimeknights.mantle.client.book.data.element.TextData;
 import slimeknights.mantle.client.book.data.PageData;
 import slimeknights.mantle.client.book.data.SectionData;
-import slimeknights.mantle.client.book.data.element.TextData;
 import slimeknights.mantle.client.book.transformer.ContentListingSectionTransformer;
 import slimeknights.mantle.client.screen.book.BookScreen;
-import slimeknights.mantle.client.screen.book.TextDataRenderer;
 import slimeknights.mantle.client.screen.book.element.BookElement;
 import slimeknights.mantle.client.screen.book.element.ListingLeftElement;
+import slimeknights.mantle.client.screen.book.TextDataRenderer;
+import slimeknights.mantle.Mantle;
 import slimeknights.mantle.util.html.HtmlElement;
 import slimeknights.mantle.util.html.HtmlGroup;
 import slimeknights.mantle.util.html.HtmlSerializable;
-
-import javax.annotation.Nullable;
-import java.util.ArrayList;
-import java.util.List;
 
 /** Page content for building an index, instantiate either through {@link ContentIndex} or {@link ContentListingSectionTransformer} */
 public class ContentListing extends PageContent {
@@ -93,7 +93,7 @@ public class ContentListing extends PageContent {
       yOff = 16;
     }
     if (this.subText != null) {
-      yOff += sectionData.parent.fontRenderer.wordWrapHeight(this.subText, BookScreen.PAGE_WIDTH) * 12 / 9;
+      yOff += sectionData.parent.fontRenderer.wordWrapHeight(FormattedText.of(this.subText), BookScreen.PAGE_WIDTH) * 12 / 9;
     }
     return getColumnHeight(yOff) / LINE_HEIGHT;
   }
@@ -181,7 +181,7 @@ public class ContentListing extends PageContent {
 
       int yOff = 0;
       if (this.title != null) yOff = 16;
-      if (this.subText != null) yOff += book.fontRenderer.wordWrapHeight(subText, BookScreen.PAGE_WIDTH) * 12 / 9;
+      if (this.subText != null) yOff += book.fontRenderer.wordWrapHeight(FormattedText.of(subText), BookScreen.PAGE_WIDTH) * 12 / 9;
       int rows = getColumnHeight(yOff) / LINE_HEIGHT;
 
       for (List<TextData> entry : entries) {

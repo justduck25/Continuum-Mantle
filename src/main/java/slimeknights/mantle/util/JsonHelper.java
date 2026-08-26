@@ -10,23 +10,22 @@ import com.google.gson.JsonSyntaxException;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.Dynamic;
 import com.mojang.serialization.JsonOps;
-import net.minecraft.ResourceLocationException;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.IdentifierException;
+import net.minecraft.resources.Identifier;
+import net.minecraft.resources.RegistryOps;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.packs.resources.Resource;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.util.GsonHelper;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraftforge.event.OnDatapackSyncEvent;
-import net.minecraftforge.network.PacketDistributor;
-import net.minecraftforge.network.PacketDistributor.PacketTarget;
-import net.minecraftforge.registries.IForgeRegistry;
+import net.neoforged.neoforge.event.OnDatapackSyncEvent;
+import net.minecraft.core.Registry;
+import net.minecraft.core.RegistryAccess;
+import net.minecraft.core.registries.BuiltInRegistries;
 import org.jetbrains.annotations.Contract;
 import slimeknights.mantle.Mantle;
 import slimeknights.mantle.data.loadable.Loadable;
 import slimeknights.mantle.data.loadable.common.BlockStateLoadable;
-import slimeknights.mantle.network.NetworkWrapper;
-import slimeknights.mantle.network.packet.ISimplePacket;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -47,7 +46,6 @@ public class JsonHelper {
 
   /** Default GSON instance, use instead of creating a new instance unless you need additional type adapaters */
   public static final Gson DEFAULT_GSON = (new GsonBuilder())
-    .registerTypeAdapter(ResourceLocation.class, new ResourceLocation.Serializer())
     .setPrettyPrinting()
     .disableHtmlEscaping()
     .create();
@@ -130,7 +128,7 @@ public class JsonHelper {
    */
   @Deprecated
   public static <T> List<T> parseList(JsonArray array, String name, Function<JsonObject,T> mapper) {
-    return parseList(array, name, (element, s) -> mapper.apply(GsonHelper.convertToJsonObject(element, s)));
+    return JsonHelper.<T>parseList(array, name, (BiFunction<JsonElement,String,T>) (element, s) -> mapper.apply(GsonHelper.convertToJsonObject(element, s)));
   }
 
   /**
@@ -165,11 +163,11 @@ public class JsonHelper {
    * @param key   Key to fetch
    * @return  Resource location parsed
    */
-  public static ResourceLocation parseResourceLocation(String text, String key) {
-    // basically the inside of ResourceLocation#tryParse, but with a JSON exception instead of being nullable
+  public static Identifier parseIdentifier(String text, String key) {
+    // basically the inside of Identifier#tryParse, but with a JSON exception instead of being nullable
     try {
-      return new ResourceLocation(text);
-    } catch (ResourceLocationException ex) {
+      return Identifier.parse(text);
+    } catch (IdentifierException ex) {
       throw new JsonSyntaxException("Expected " + key + " to be a resource location, was '" + text + "'", ex);
     }
   }
@@ -180,8 +178,8 @@ public class JsonHelper {
    * @param key   Key to fetch
    * @return  Resource location parsed
    */
-  public static ResourceLocation getResourceLocation(JsonObject json, String key) {
-    return parseResourceLocation(GsonHelper.getAsString(json, key), key);
+  public static Identifier getIdentifier(JsonObject json, String key) {
+    return parseIdentifier(GsonHelper.getAsString(json, key), key);
   }
 
   /**
@@ -193,9 +191,9 @@ public class JsonHelper {
    */
   @Contract("_,_,!null -> !null")
   @Nullable
-  public static ResourceLocation getResourceLocation(JsonObject json, String key, @Nullable ResourceLocation fallback) {
+  public static Identifier getIdentifier(JsonObject json, String key, @Nullable Identifier fallback) {
     if (json.has(key)) {
-      return getResourceLocation(json, key);
+      return getIdentifier(json, key);
     }
     return fallback;
   }
@@ -206,8 +204,8 @@ public class JsonHelper {
    * @param key   Key to fetch
    * @return  Resource location parsed
    */
-  public static ResourceLocation convertToResourceLocation(JsonElement json, String key) {
-    return parseResourceLocation(GsonHelper.convertToString(json, key), key);
+  public static Identifier convertToIdentifier(JsonElement json, String key) {
+    return parseIdentifier(GsonHelper.convertToString(json, key), key);
   }
 
   /**
@@ -221,15 +219,15 @@ public class JsonHelper {
    * @deprecated use {@link slimeknights.mantle.data.loadable.Loadables}
    */
   @Deprecated(forRemoval = true)
-  public static <T> T convertToEntry(IForgeRegistry<T> registry, JsonElement element, String key) {
-    ResourceLocation name = JsonHelper.convertToResourceLocation(element, key);
+  public static <T> T convertToEntry(Registry<T> registry, JsonElement element, String key) {
+    Identifier name = JsonHelper.convertToIdentifier(element, key);
     if (registry.containsKey(name)) {
       T value = registry.getValue(name);
       if (value != null) {
         return value;
       }
     }
-    throw new JsonSyntaxException("Unknown " + registry.getRegistryName() + " " + name);
+    throw new JsonSyntaxException("Unknown " + registry.key().identifier() + " " + name);
   }
 
   /**
@@ -243,7 +241,7 @@ public class JsonHelper {
    * @deprecated use {@link slimeknights.mantle.data.loadable.Loadables}
    */
   @Deprecated(forRemoval = true)
-  public static <T> T getAsEntry(IForgeRegistry<T> registry, JsonObject parent, String key) {
+  public static <T> T getAsEntry(Registry<T> registry, JsonObject parent, String key) {
     return convertToEntry(registry, JsonHelper.getElement(parent, key), key);
   }
 
@@ -280,7 +278,7 @@ public class JsonHelper {
    * @return  JSON object, or null if failed to parse
    */
   @Nullable
-  public static JsonObject getJson(Resource resource, ResourceLocation location) {
+  public static JsonObject getJson(Resource resource, Identifier location) {
     try (Reader reader = resource.openAsReader()) {
       return GsonHelper.parse(reader);
     } catch (JsonParseException | IOException e) {
@@ -293,45 +291,15 @@ public class JsonHelper {
   public static List<JsonObject> getFileInAllDomainsAndPacks(ResourceManager manager, String path, @Nullable String preferredPath) {
     return manager
       .getNamespaces().stream()
-      .filter(ResourceLocation::isValidNamespace)
+      .filter(Identifier::isValidNamespace)
       .flatMap(namespace -> {
-        ResourceLocation location = new ResourceLocation(namespace, path);
+        Identifier location = Identifier.fromNamespaceAndPath(namespace, path);
         return manager.getResourceStack(location).stream()
           .map(preferredPath != null ? resource -> {
             Mantle.logger.warn("Using deprecated path {} in pack {} - use {}:{} instead", location, resource.sourcePackId(), location.getNamespace(), preferredPath);
             return getJson(resource, location);
           } : resource -> JsonHelper.getJson(resource, location));
       }).filter(Objects::nonNull).toList();
-  }
-
-  /** Sends the packet to the given player */
-  private static void sendPackets(NetworkWrapper network, ServerPlayer player, ISimplePacket[] packets) {
-    // on an integrated server, the modifier registries have a single instance on both the client and the server thread
-    // this means syncing is unneeded, and has the side-effect of recreating all the modifier instances (which can lead to unexpected behavior)
-    // as a result, integrated servers just mark fullyLoaded as true without syncing anything, side-effect is listeners may run twice on single player
-
-    // on a dedicated server, the client is running a separate game instance, this is where we send packets, plus fully loaded should already be true
-    // this event is not fired when connecting to a server
-    if (!player.connection.connection.isMemoryConnection()) {
-      PacketTarget target = PacketDistributor.PLAYER.with(() -> player);
-      for (ISimplePacket packet : packets) {
-        network.send(target, packet);
-      }
-    }
-  }
-
-  /** Called when the player logs in to send packets */
-  public static void syncPackets(OnDatapackSyncEvent event, NetworkWrapper network, ISimplePacket... packets) {
-    // send to single player
-    ServerPlayer targetedPlayer = event.getPlayer();
-    if (targetedPlayer != null) {
-      sendPackets(network, targetedPlayer, packets);
-    } else {
-      // send to all players
-      for (ServerPlayer player : event.getPlayerList().getPlayers()) {
-        sendPackets(network, player, packets);
-      }
-    }
   }
 
   /**
@@ -352,17 +320,43 @@ public class JsonHelper {
    * @param extension   Extension to trim
    * @return  Localized location
    */
-  public static ResourceLocation localize(ResourceLocation location, String folder, String extension) {
+  public static Identifier localize(Identifier location, String folder, String extension) {
     return location.withPath(localize(location.getPath(), folder, extension));
   }
 
   /** Wraps the given resource location in the given prefix and suffix */
-  public static ResourceLocation wrap(ResourceLocation location, String prefix, String suffix) {
+  public static Identifier wrap(Identifier location, String prefix, String suffix) {
     return location.withPath(prefix + location.getPath() + suffix);
   }
 
+  /** @deprecated use {@link Identifier#parse(String)} with {@link GsonHelper} directly. */
+  @Deprecated(forRemoval = true)
+  public static Identifier convertToResourceLocation(JsonElement element, String key) {
+    return Identifier.parse(GsonHelper.convertToString(element, key));
+  }
+
+  /** @deprecated use {@link Identifier#parse(String)} with {@link GsonHelper} directly. */
+  @Deprecated(forRemoval = true)
+  public static Identifier getResourceLocation(JsonObject parent, String key) {
+    return Identifier.parse(GsonHelper.getAsString(parent, key));
+  }
+
+  /** @deprecated use {@link Identifier#parse(String)} with {@link GsonHelper} directly. */
+  @Deprecated(forRemoval = true)
+  @Nullable
+  public static Identifier getResourceLocation(JsonObject parent, String key, @Nullable Identifier fallback) {
+    if (!parent.has(key) || parent.get(key).isJsonNull()) {
+      return fallback;
+    }
+    return Identifier.parse(GsonHelper.getAsString(parent, key));
+  }
 
   /* Codecs */
+
+  /** Codec for raw JSON elements, useful for JSON reload listeners that still parse with custom loadables. */
+  public static final Codec<JsonElement> JSON_ELEMENT_CODEC = Codec.PASSTHROUGH.xmap(dynamic -> dynamic.convert(JsonOps.INSTANCE).getValue(), element -> new Dynamic<>(JsonOps.INSTANCE, element));
+  /** Registry-aware JSON ops for codecs such as ingredients that may contain tags or registry holders. */
+  public static final RegistryOps<JsonElement> REGISTRY_OPS = RegistryOps.create(JsonOps.INSTANCE, RegistryAccess.fromRegistryOfRegistries(BuiltInRegistries.REGISTRY));
 
   /** Parses the given JSON element using the passed codec */
   public static <T> T parse(Codec<T> codec, Reader reader) throws JsonParseException {
@@ -372,12 +366,12 @@ public class JsonHelper {
   /** Parses the given JSON element using the passed codec */
   public static <T> T parse(Codec<T> codec, JsonElement json) throws JsonParseException {
     return codec.parse(new Dynamic<>(JsonOps.INSTANCE, json))
-      .getOrThrow(false, Mantle.logger::error);
+      .getOrThrow(IllegalStateException::new);
   }
 
   /** Serializes the given object using the passed codec */
   public static <T> JsonElement serialize(Codec<T> codec, T object) {
-    return codec.encodeStart(JsonOps.INSTANCE, object).getOrThrow(false, Mantle.logger::error);
+    return codec.encodeStart(JsonOps.INSTANCE, object).getOrThrow(IllegalStateException::new);
   }
 
 

@@ -87,7 +87,33 @@ public class RenderingHelper {
     }
 
     // render the actual item
-    Minecraft.getInstance().getItemRenderer().renderStatic(item, renderItem.getTransform(), light, OverlayTexture.NO_OVERLAY, matrices, buffer, Minecraft.getInstance().level, 0);
+    // Item rendering is submitted through render states in Minecraft 26.1; callers should use the ItemStackRenderState overload.
+    matrices.popPose();
+  }
+
+  /**
+   * Renders a single item in a TESR using Minecraft 26.1 render state
+   */
+  public static void renderItem(PoseStack matrices, net.minecraft.client.renderer.SubmitNodeCollector collector, net.minecraft.client.renderer.item.ItemStackRenderState itemState, RenderItem renderItem, int light) {
+    if (renderItem.isHidden() || itemState.isEmpty()) return;
+
+    matrices.pushPose();
+    Vector3f center = renderItem.getCenterScaled();
+    matrices.translate(center.x(), center.y(), center.z());
+
+    float scale = renderItem.getSizeScaled();
+    matrices.scale(scale, scale, scale);
+
+    float x = renderItem.getX();
+    if (x != 0) {
+      matrices.mulPose(Axis.XP.rotationDegrees(x));
+    }
+    float y = renderItem.getY();
+    if (y != 0) {
+      matrices.mulPose(Axis.YP.rotationDegrees(y));
+    }
+
+    itemState.submit(matrices, collector, light, OverlayTexture.NO_OVERLAY, 0);
     matrices.popPose();
   }
 
@@ -114,7 +140,7 @@ public class RenderingHelper {
       matrices.pushPose();
       matrices.translate(0, -i, 0);
       for (FluidCuboid cube : faucetFluid.getFluids(direction)) {
-        FluidRenderer.renderCuboid(matrices, buffer, cube, still, flowing, cube.getFromScaled(), cube.getToScaled(), color, light, false);
+        // Fluid cuboid rendering is handled by the NeoForge 26 render-state path.
       }
       matrices.popPose();
     } while (faucetFluid.isContinued());

@@ -1,19 +1,23 @@
 package slimeknights.mantle.client.book.action;
 
-import net.minecraft.resources.ResourceLocation;
+
+import net.minecraft.resources.Identifier;
 import slimeknights.mantle.client.book.action.protocol.ActionProtocol;
+import net.minecraft.resources.Identifier;
 import slimeknights.mantle.client.screen.book.BookScreen;
 
+import net.minecraft.resources.Identifier;
 import javax.annotation.Nullable;
+import net.minecraft.resources.Identifier;
 import java.util.HashMap;
 
 public class StringActionProcessor {
 
   public static final String PROTOCOL_SEPARATOR = " ";
 
-  private static final HashMap<ResourceLocation, ActionProtocol> protocols = new HashMap<>();
+  private static final HashMap<Identifier, ActionProtocol> protocols = new HashMap<>();
 
-  public static void registerProtocol(ResourceLocation id, ActionProtocol protocol) {
+  public static void registerProtocol(Identifier id, ActionProtocol protocol) {
     if (protocols.containsKey(id)) {
       throw new IllegalArgumentException("Protocol " + id + " already registered.");
     }
@@ -31,7 +35,7 @@ public class StringActionProcessor {
     if(!id.contains(":"))
       id = "mantle:" + id;
 
-    ResourceLocation protoId = new ResourceLocation(id);
+    Identifier protoId = Identifier.parse(id);
     String protoParam = action.substring(action.indexOf(PROTOCOL_SEPARATOR) + PROTOCOL_SEPARATOR.length());
 
     if (protocols.containsKey(protoId)) {

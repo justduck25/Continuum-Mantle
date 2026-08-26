@@ -25,7 +25,7 @@ public class HungerCommand {
    * @param subCommand  Command builder
    */
   public static void register(LiteralArgumentBuilder<CommandSourceStack> subCommand) {
-    subCommand = subCommand.requires(sender -> sender.hasPermission(MantleCommand.PERMISSION_GAME_COMMANDS));
+    subCommand = subCommand.requires(sender -> MantleCommand.hasPermission(sender, MantleCommand.PERMISSION_GAME_COMMANDS));
     for (Operation operation : Operation.values()) {
       operation.register(subCommand);
     }
@@ -37,8 +37,8 @@ public class HungerCommand {
     SET(20) {
       @Override
       public void apply(FoodData food, int hunger, float saturation) {
-        food.foodLevel = hunger;
-        food.saturationLevel = Math.min(hunger, saturation);
+        food.setFoodLevel(hunger);
+        food.setSaturation(Math.min(hunger, saturation));
       }
     },
     ADD(1) {
@@ -50,8 +50,8 @@ public class HungerCommand {
     SUBTRACT(0) {
       @Override
       public void apply(FoodData food, int hunger, float saturation) {
-        food.foodLevel = Math.max(0, food.foodLevel - hunger);
-        food.saturationLevel = Mth.clamp(food.saturationLevel - hunger * saturation * 2, 0, food.foodLevel);
+        food.setFoodLevel(Math.max(0, food.getFoodLevel() - hunger));
+        food.setSaturation(Mth.clamp(food.getSaturationLevel() - hunger * saturation * 2, 0, food.getFoodLevel()));
       }
     };
 

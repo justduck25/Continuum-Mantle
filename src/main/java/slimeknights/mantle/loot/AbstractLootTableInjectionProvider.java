@@ -4,9 +4,10 @@ import com.google.gson.JsonObject;
 import net.minecraft.data.CachedOutput;
 import net.minecraft.data.PackOutput;
 import net.minecraft.data.PackOutput.Target;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraftforge.common.crafting.CraftingHelper;
-import net.minecraftforge.common.crafting.conditions.ICondition;
+import com.mojang.serialization.JsonOps;
+import net.minecraft.resources.Identifier;
+import net.neoforged.neoforge.common.conditions.ICondition;
+import java.util.List;
 import slimeknights.mantle.data.GenericDataProvider;
 
 import java.util.ArrayList;
@@ -33,14 +34,14 @@ public abstract class AbstractLootTableInjectionProvider extends GenericDataProv
     return allOf(builders.stream().map(builder -> {
       JsonObject json = LootTableInjection.LOADABLE.serialize(builder.build()).getAsJsonObject();
       if (builder.conditions.length > 0) {
-        json.add("conditions", CraftingHelper.serialize(builder.conditions));
+        json.add("conditions", ICondition.LIST_CODEC.encodeStart(JsonOps.INSTANCE, List.of(builder.conditions)).getOrThrow());
       }
-      return saveJson(output, new ResourceLocation(domain, builder.path), json);
+      return saveJson(output, Identifier.fromNamespaceAndPath(domain, builder.path), json);
     }));
   }
 
   /** Creates a new injection */
-  protected LootTableInjection.Builder inject(String path, ResourceLocation name, ICondition... conditions) {
+  protected LootTableInjection.Builder inject(String path, Identifier name, ICondition... conditions) {
     LootTableInjection.Builder builder = new LootTableInjection.Builder();
     builders.add(new Builder(path, name, builder, conditions));
     return builder;
@@ -48,21 +49,21 @@ public abstract class AbstractLootTableInjectionProvider extends GenericDataProv
 
   /** Creates a new injection for the Minecraft domain */
   protected LootTableInjection.Builder inject(String path, String name, ICondition... conditions) {
-    return inject(path, new ResourceLocation(name), conditions);
+    return inject(path, Identifier.parse(name), conditions);
   }
 
   /** Creates a new injection for the Minecraft domain */
   protected LootTableInjection.Builder injectChest(String name, ICondition... conditions) {
-    return inject(name, new ResourceLocation("chests/" + name), conditions);
+    return inject(name, Identifier.withDefaultNamespace("chests/" + name), conditions);
   }
 
   /** Creates a new injection for the Minecraft domain */
   protected LootTableInjection.Builder injectGameplay(String name, ICondition... conditions) {
-    return inject(name, new ResourceLocation("gameplay/" + name), conditions);
+    return inject(name, Identifier.withDefaultNamespace("gameplay/" + name), conditions);
   }
 
   /** Internal builder tuple */
-  private record Builder(String path, ResourceLocation name, LootTableInjection.Builder builder, ICondition[] conditions) {
+  private record Builder(String path, Identifier name, LootTableInjection.Builder builder, ICondition[] conditions) {
     public LootTableInjection build() {
       return builder.build(name);
     }

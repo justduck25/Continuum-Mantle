@@ -4,6 +4,7 @@ import net.minecraft.tags.TagKey;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockBehaviour.BlockStateBase;
 import net.minecraft.world.level.block.state.BlockState;
+import slimeknights.mantle.Mantle;
 import slimeknights.mantle.data.loadable.Loadables;
 import slimeknights.mantle.data.loadable.record.RecordLoadable;
 import slimeknights.mantle.data.loadable.record.SingletonLoader;
@@ -39,6 +40,18 @@ public interface BlockPredicate extends IJsonPredicate<BlockState> {
   BlockPredicate BLOCKS_MOTION = simple(BlockStateBase::blocksMotion);
   /** Predicate matching blocks that can be replaced when placing blocks */
   BlockPredicate CAN_BE_REPLACED = simple(BlockStateBase::canBeReplaced);
+  /** Registers builtin singleton predicates for serialization. */
+  @SuppressWarnings("unused")
+  boolean REGISTER_BUILTINS = registerBuiltins();
+
+  /** Registers builtin singleton predicates for serialization. */
+  static boolean registerBuiltins() {
+    LOADER.register(Mantle.getResource("requires_tool"), REQUIRES_TOOL.getLoader());
+    LOADER.register(Mantle.getResource("blocks_motion"), BLOCKS_MOTION.getLoader());
+    LOADER.register(Mantle.getResource("can_be_replaced"), CAN_BE_REPLACED.getLoader());
+    LOADER.register(Mantle.getResource("block_properties"), BlockPropertiesPredicate.LOADER);
+    return true;
+  }
 
   /** Creates a new simple predicate */
   static BlockPredicate simple(Predicate<BlockState> predicate) {

@@ -1,6 +1,6 @@
 package slimeknights.mantle.data.registry;
 
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import slimeknights.mantle.registration.object.IdAwareObject;
 
 import javax.annotation.Nullable;
@@ -14,7 +14,7 @@ import java.util.Map;
  */
 public class IdAwareComponentRegistry<T extends IdAwareObject> extends AbstractNamedComponentRegistry<T> {
   /** Registered box expansion types */
-  private final Map<ResourceLocation,T> values = new HashMap<>();
+  private final Map<Identifier,T> values = new HashMap<>();
 
   public IdAwareComponentRegistry(String errorText) {
     super(errorText);
@@ -22,7 +22,7 @@ public class IdAwareComponentRegistry<T extends IdAwareObject> extends AbstractN
 
   /** Registers the value with the given name */
   public synchronized <V extends T> V register(V value) {
-    ResourceLocation name = value.getId();
+    Identifier name = value.getId();
     if (values.putIfAbsent(name, value) != null) {
       throw new IllegalArgumentException("Duplicate registration " + name);
     }
@@ -32,17 +32,17 @@ public class IdAwareComponentRegistry<T extends IdAwareObject> extends AbstractN
   /** Gets a value or null if missing */
   @Override
   @Nullable
-  public T getValue(ResourceLocation name) {
+  public T getValue(Identifier name) {
     return values.get(name);
   }
 
   @Override
-  public ResourceLocation getKey(T object) {
+  public Identifier getKey(T object) {
     return object.getId();
   }
 
   @Override
-  public Collection<ResourceLocation> getKeys() {
+  public Collection<Identifier> getKeys() {
     return values.keySet();
   }
 

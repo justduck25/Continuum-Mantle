@@ -4,6 +4,7 @@ import net.minecraft.tags.DamageTypeTags;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.damagesource.DamageType;
+import slimeknights.mantle.Mantle;
 import slimeknights.mantle.data.loadable.Loadables;
 import slimeknights.mantle.data.loadable.record.RecordLoadable;
 import slimeknights.mantle.data.predicate.IJsonPredicate;
@@ -26,11 +27,25 @@ public interface DamageSourcePredicate extends IJsonPredicate<DamageSource> {
   TagPredicateRegistry<DamageType, DamageSource> LOADER = new TagPredicateRegistry<>("Damage Source Predicate", ANY, NONE, Loadables.DAMAGE_TYPE_TAG, (tag, source) -> source.is(tag));
 
   /** Damage that is caused by an entity using another entity */
-  DamageSourcePredicate IS_INDIRECT = simple(DamageSource::isIndirect);
+  DamageSourcePredicate IS_INDIRECT = simple(source -> source.getDirectEntity() != source.getEntity());
   /** Damage that is caused by an entity */
   DamageSourcePredicate HAS_ENTITY = simple(source -> source.getEntity() != null);
   /** Damage that protection works against */
   DamageSourcePredicate CAN_PROTECT = simple(source -> !source.is(DamageTypeTags.BYPASSES_EFFECTS) && !source.is(DamageTypeTags.BYPASSES_ENCHANTMENTS) && !source.is(DamageTypeTags.BYPASSES_INVULNERABILITY));
+  /** Registers builtin singleton predicates for serialization. */
+  @SuppressWarnings("unused")
+  boolean REGISTER_BUILTINS = registerBuiltins();
+
+  /** Registers builtin singleton predicates for serialization. */
+  static boolean registerBuiltins() {
+    LOADER.register(Mantle.getResource("indirect"), IS_INDIRECT.getLoader());
+    LOADER.register(Mantle.getResource("has_entity"), HAS_ENTITY.getLoader());
+    LOADER.register(Mantle.getResource("can_protect"), CAN_PROTECT.getLoader());
+    LOADER.register(Mantle.getResource("source_attacker"), SourceAttackerPredicate.LOADER);
+    LOADER.register(Mantle.getResource("source_message"), SourceMessagePredicate.LOADER);
+    LOADER.register(Mantle.getResource("damage_type"), DamageTypePredicate.LOADER);
+    return true;
+  }
 
   @Override
   default IJsonPredicate<DamageSource> inverted() {

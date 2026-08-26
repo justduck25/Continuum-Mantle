@@ -1,11 +1,12 @@
 package slimeknights.mantle.client.screen;
 
 import lombok.RequiredArgsConstructor;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.MenuScreens.ScreenConstructor;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 
@@ -18,7 +19,7 @@ public class BackgroundContainerScreen<T extends AbstractContainerMenu> extends 
 	/**
 	 * Background drawn for this screen
 	 */
-	protected final ResourceLocation background;
+	protected final Identifier background;
 
 	/**
 	 * Creates a new screen instance
@@ -27,11 +28,9 @@ public class BackgroundContainerScreen<T extends AbstractContainerMenu> extends 
 	 * @param name       Container name
 	 * @param background Container background
 	 */
-	public BackgroundContainerScreen(T container, Inventory inventory, Component name, int height, ResourceLocation background) {
-		super(container, inventory, name);
+	public BackgroundContainerScreen(T container, Inventory inventory, Component name, int height, Identifier background) {
+		super(container, inventory, name, 176, height);
 		this.background = background;
-		this.imageHeight = height;
-		this.inventoryLabelY = this.imageHeight - 94;
 	}
 
 	@Override
@@ -41,21 +40,14 @@ public class BackgroundContainerScreen<T extends AbstractContainerMenu> extends 
 	}
 
 	@Override
-	public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTicks) {
-		this.renderBackground(graphics);
-		super.render(graphics, mouseX, mouseY, partialTicks);
-		this.renderTooltip(graphics, mouseX, mouseY);
-	}
-
-	@Override
-	protected void renderBg(GuiGraphics graphics, float partialTicks, int mouseX, int mouseY) {
-		graphics.setColor(1.0F, 1.0F, 1.0F, 1.0F);
-		graphics.blit(this.background, this.leftPos, this.topPos, 0, 0, this.imageWidth, this.imageHeight);
+	public void extractBackground(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTicks) {
+		super.extractBackground(graphics, mouseX, mouseY, partialTicks);
+		graphics.blit(RenderPipelines.GUI_TEXTURED, this.background, this.leftPos, this.topPos, 0, 0, this.imageWidth, this.imageHeight, 256, 256);
 	}
 
 	@RequiredArgsConstructor(staticName = "of")
 	public static class Factory<T extends AbstractContainerMenu> implements ScreenConstructor<T,BackgroundContainerScreen<T>> {
-		private final ResourceLocation background;
+		private final Identifier background;
 		private final int height;
 
 		/**
@@ -63,8 +55,8 @@ public class BackgroundContainerScreen<T extends AbstractContainerMenu> extends 
 		 * @param height Screen height
 		 * @param name   Name of this container
 		 */
-		public static <T extends AbstractContainerMenu> Factory<T> ofName(int height, ResourceLocation name) {
-			return of(new ResourceLocation(name.getNamespace(), String.format("textures/gui/%s.png", name.getPath())), height);
+		public static <T extends AbstractContainerMenu> Factory<T> ofName(int height, Identifier name) {
+			return of(Identifier.fromNamespaceAndPath(name.getNamespace(), String.format("textures/gui/%s.png", name.getPath())), height);
 		}
 
     @Override

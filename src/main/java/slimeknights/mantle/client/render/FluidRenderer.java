@@ -1,26 +1,19 @@
 package slimeknights.mantle.client.render;
 
-import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.vertex.BufferBuilder;
-import com.mojang.blaze3d.vertex.BufferUploader;
-import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.blaze3d.vertex.Tesselator;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import com.mojang.blaze3d.vertex.VertexFormat;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.GameRenderer;
-import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.rendertype.RenderTypes;
+import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
-import net.minecraft.core.BlockPos;
+import net.minecraft.client.resources.model.sprite.SpriteId;
 import net.minecraft.core.Direction;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.inventory.InventoryMenu;
-import net.minecraft.world.level.Level;
-import net.minecraftforge.client.extensions.common.IClientFluidTypeExtensions;
-import net.minecraftforge.fluids.FluidStack;
-import net.minecraftforge.fluids.FluidType;
+import net.minecraft.resources.Identifier;
+import net.minecraft.client.renderer.texture.TextureAtlas;
+import slimeknights.mantle.fluid.texture.FluidTextureManager;
+import net.neoforged.neoforge.fluids.FluidStack;
+import net.neoforged.neoforge.fluids.FluidType;
 import org.joml.Matrix4f;
 import org.joml.Vector3f;
 import slimeknights.mantle.client.render.FluidCuboid.FluidFace;
@@ -34,8 +27,8 @@ public class FluidRenderer {
    * @param sprite  Sprite name
    * @return  Sprite location
    */
-  public static TextureAtlasSprite getBlockSprite(ResourceLocation sprite) {
-    return Minecraft.getInstance().getModelManager().getAtlas(InventoryMenu.BLOCK_ATLAS).getSprite(sprite);
+  public static TextureAtlasSprite getBlockSprite(Identifier sprite) {
+    return Minecraft.getInstance().getAtlasManager().get(new SpriteId(TextureAtlas.LOCATION_BLOCKS, sprite));
   }
 
   /**
@@ -137,7 +130,8 @@ public class FluidRenderer {
 
     // if rotating by 90 or 270, swap U and V
     float minU, maxU, minV, maxV;
-    double size = flowing ? 8 : 16;
+    // MC 26.1 TextureAtlasSprite#getU/getV expects normalized 0..1 offsets, not 0..16 pixel offsets.
+    float size = flowing ? 0.5f : 1.0f;
     if ((rotation % 180) == 90) {
       minU = sprite.getU(v1 * size);
       maxU = sprite.getU(v2 * size);
@@ -186,40 +180,40 @@ public class FluidRenderer {
     int b = color & 0xFF;
     switch (face) {
       case DOWN -> {
-        renderer.vertex(matrix, x1, y1, z2).color(r, g, b, a).uv(u1, v1).uv2(light1, light2).endVertex();
-        renderer.vertex(matrix, x1, y1, z1).color(r, g, b, a).uv(u2, v2).uv2(light1, light2).endVertex();
-        renderer.vertex(matrix, x2, y1, z1).color(r, g, b, a).uv(u3, v3).uv2(light1, light2).endVertex();
-        renderer.vertex(matrix, x2, y1, z2).color(r, g, b, a).uv(u4, v4).uv2(light1, light2).endVertex();
+        renderer.addVertex(matrix, x1, y1, z2).setColor(r, g, b, a).setUv(u1, v1).setOverlay(OverlayTexture.NO_OVERLAY).setUv2(light1, light2).setNormal(0, -1, 0);
+        renderer.addVertex(matrix, x1, y1, z1).setColor(r, g, b, a).setUv(u2, v2).setOverlay(OverlayTexture.NO_OVERLAY).setUv2(light1, light2).setNormal(0, -1, 0);
+        renderer.addVertex(matrix, x2, y1, z1).setColor(r, g, b, a).setUv(u3, v3).setOverlay(OverlayTexture.NO_OVERLAY).setUv2(light1, light2).setNormal(0, -1, 0);
+        renderer.addVertex(matrix, x2, y1, z2).setColor(r, g, b, a).setUv(u4, v4).setOverlay(OverlayTexture.NO_OVERLAY).setUv2(light1, light2).setNormal(0, -1, 0);
       }
       case UP -> {
-        renderer.vertex(matrix, x1, y2, z1).color(r, g, b, a).uv(u1, v1).uv2(light1, light2).endVertex();
-        renderer.vertex(matrix, x1, y2, z2).color(r, g, b, a).uv(u2, v2).uv2(light1, light2).endVertex();
-        renderer.vertex(matrix, x2, y2, z2).color(r, g, b, a).uv(u3, v3).uv2(light1, light2).endVertex();
-        renderer.vertex(matrix, x2, y2, z1).color(r, g, b, a).uv(u4, v4).uv2(light1, light2).endVertex();
+        renderer.addVertex(matrix, x1, y2, z1).setColor(r, g, b, a).setUv(u1, v1).setOverlay(OverlayTexture.NO_OVERLAY).setUv2(light1, light2).setNormal(0, 1, 0);
+        renderer.addVertex(matrix, x1, y2, z2).setColor(r, g, b, a).setUv(u2, v2).setOverlay(OverlayTexture.NO_OVERLAY).setUv2(light1, light2).setNormal(0, 1, 0);
+        renderer.addVertex(matrix, x2, y2, z2).setColor(r, g, b, a).setUv(u3, v3).setOverlay(OverlayTexture.NO_OVERLAY).setUv2(light1, light2).setNormal(0, 1, 0);
+        renderer.addVertex(matrix, x2, y2, z1).setColor(r, g, b, a).setUv(u4, v4).setOverlay(OverlayTexture.NO_OVERLAY).setUv2(light1, light2).setNormal(0, 1, 0);
       }
       case NORTH -> {
-        renderer.vertex(matrix, x1, y1, z1).color(r, g, b, a).uv(u1, v1).uv2(light1, light2).endVertex();
-        renderer.vertex(matrix, x1, y2, z1).color(r, g, b, a).uv(u2, v2).uv2(light1, light2).endVertex();
-        renderer.vertex(matrix, x2, y2, z1).color(r, g, b, a).uv(u3, v3).uv2(light1, light2).endVertex();
-        renderer.vertex(matrix, x2, y1, z1).color(r, g, b, a).uv(u4, v4).uv2(light1, light2).endVertex();
+        renderer.addVertex(matrix, x1, y1, z1).setColor(r, g, b, a).setUv(u1, v1).setOverlay(OverlayTexture.NO_OVERLAY).setUv2(light1, light2).setNormal(0, 0, -1);
+        renderer.addVertex(matrix, x1, y2, z1).setColor(r, g, b, a).setUv(u2, v2).setOverlay(OverlayTexture.NO_OVERLAY).setUv2(light1, light2).setNormal(0, 0, -1);
+        renderer.addVertex(matrix, x2, y2, z1).setColor(r, g, b, a).setUv(u3, v3).setOverlay(OverlayTexture.NO_OVERLAY).setUv2(light1, light2).setNormal(0, 0, -1);
+        renderer.addVertex(matrix, x2, y1, z1).setColor(r, g, b, a).setUv(u4, v4).setOverlay(OverlayTexture.NO_OVERLAY).setUv2(light1, light2).setNormal(0, 0, -1);
       }
       case SOUTH -> {
-        renderer.vertex(matrix, x2, y1, z2).color(r, g, b, a).uv(u1, v1).uv2(light1, light2).endVertex();
-        renderer.vertex(matrix, x2, y2, z2).color(r, g, b, a).uv(u2, v2).uv2(light1, light2).endVertex();
-        renderer.vertex(matrix, x1, y2, z2).color(r, g, b, a).uv(u3, v3).uv2(light1, light2).endVertex();
-        renderer.vertex(matrix, x1, y1, z2).color(r, g, b, a).uv(u4, v4).uv2(light1, light2).endVertex();
+        renderer.addVertex(matrix, x2, y1, z2).setColor(r, g, b, a).setUv(u1, v1).setOverlay(OverlayTexture.NO_OVERLAY).setUv2(light1, light2).setNormal(0, 0, 1);
+        renderer.addVertex(matrix, x2, y2, z2).setColor(r, g, b, a).setUv(u2, v2).setOverlay(OverlayTexture.NO_OVERLAY).setUv2(light1, light2).setNormal(0, 0, 1);
+        renderer.addVertex(matrix, x1, y2, z2).setColor(r, g, b, a).setUv(u3, v3).setOverlay(OverlayTexture.NO_OVERLAY).setUv2(light1, light2).setNormal(0, 0, 1);
+        renderer.addVertex(matrix, x1, y1, z2).setColor(r, g, b, a).setUv(u4, v4).setOverlay(OverlayTexture.NO_OVERLAY).setUv2(light1, light2).setNormal(0, 0, 1);
       }
       case WEST -> {
-        renderer.vertex(matrix, x1, y1, z2).color(r, g, b, a).uv(u1, v1).uv2(light1, light2).endVertex();
-        renderer.vertex(matrix, x1, y2, z2).color(r, g, b, a).uv(u2, v2).uv2(light1, light2).endVertex();
-        renderer.vertex(matrix, x1, y2, z1).color(r, g, b, a).uv(u3, v3).uv2(light1, light2).endVertex();
-        renderer.vertex(matrix, x1, y1, z1).color(r, g, b, a).uv(u4, v4).uv2(light1, light2).endVertex();
+        renderer.addVertex(matrix, x1, y1, z2).setColor(r, g, b, a).setUv(u1, v1).setOverlay(OverlayTexture.NO_OVERLAY).setUv2(light1, light2).setNormal(-1, 0, 0);
+        renderer.addVertex(matrix, x1, y2, z2).setColor(r, g, b, a).setUv(u2, v2).setOverlay(OverlayTexture.NO_OVERLAY).setUv2(light1, light2).setNormal(-1, 0, 0);
+        renderer.addVertex(matrix, x1, y2, z1).setColor(r, g, b, a).setUv(u3, v3).setOverlay(OverlayTexture.NO_OVERLAY).setUv2(light1, light2).setNormal(-1, 0, 0);
+        renderer.addVertex(matrix, x1, y1, z1).setColor(r, g, b, a).setUv(u4, v4).setOverlay(OverlayTexture.NO_OVERLAY).setUv2(light1, light2).setNormal(-1, 0, 0);
       }
       case EAST -> {
-        renderer.vertex(matrix, x2, y1, z1).color(r, g, b, a).uv(u1, v1).uv2(light1, light2).endVertex();
-        renderer.vertex(matrix, x2, y2, z1).color(r, g, b, a).uv(u2, v2).uv2(light1, light2).endVertex();
-        renderer.vertex(matrix, x2, y2, z2).color(r, g, b, a).uv(u3, v3).uv2(light1, light2).endVertex();
-        renderer.vertex(matrix, x2, y1, z2).color(r, g, b, a).uv(u4, v4).uv2(light1, light2).endVertex();
+        renderer.addVertex(matrix, x2, y1, z1).setColor(r, g, b, a).setUv(u1, v1).setOverlay(OverlayTexture.NO_OVERLAY).setUv2(light1, light2).setNormal(1, 0, 0);
+        renderer.addVertex(matrix, x2, y2, z1).setColor(r, g, b, a).setUv(u2, v2).setOverlay(OverlayTexture.NO_OVERLAY).setUv2(light1, light2).setNormal(1, 0, 0);
+        renderer.addVertex(matrix, x2, y2, z2).setColor(r, g, b, a).setUv(u3, v3).setOverlay(OverlayTexture.NO_OVERLAY).setUv2(light1, light2).setNormal(1, 0, 0);
+        renderer.addVertex(matrix, x2, y1, z2).setColor(r, g, b, a).setUv(u4, v4).setOverlay(OverlayTexture.NO_OVERLAY).setUv2(light1, light2).setNormal(1, 0, 0);
       }
     }
   }
@@ -264,11 +258,10 @@ public class FluidRenderer {
     }
 
     // fluid attributes, fetch once for all fluids to save effort
-    IClientFluidTypeExtensions clientFluid = IClientFluidTypeExtensions.of(fluid.getFluid());
-    TextureAtlasSprite still = getBlockSprite(clientFluid.getStillTexture(fluid));
-    TextureAtlasSprite flowing = getBlockSprite(clientFluid.getFlowingTexture(fluid));
-    int color = clientFluid.getTintColor(fluid);
     FluidType type = fluid.getFluid().getFluidType();
+    TextureAtlasSprite still = getBlockSprite(FluidTextureManager.getStillTexture(type));
+    TextureAtlasSprite flowing = getBlockSprite(FluidTextureManager.getFlowingTexture(type));
+    int color = FluidTextureManager.getColor(type);
     light = withBlockLight(light, type.getLightLevel(fluid));
     boolean isGas = type.isLighterThanAir();
 
@@ -319,12 +312,11 @@ public class FluidRenderer {
     }
 
     // fluid attributes
-    IClientFluidTypeExtensions clientFluid = IClientFluidTypeExtensions.of(fluid.getFluid());
-    TextureAtlasSprite still = getBlockSprite(clientFluid.getStillTexture(fluid));
-    TextureAtlasSprite flowing = getBlockSprite(clientFluid.getFlowingTexture(fluid));
     FluidType type = fluid.getFluid().getFluidType();
+    TextureAtlasSprite still = getBlockSprite(FluidTextureManager.getStillTexture(type));
+    TextureAtlasSprite flowing = getBlockSprite(FluidTextureManager.getFlowingTexture(type));
     boolean isGas = type.isLighterThanAir();
-    int color = clientFluid.getTintColor(fluid);
+    int color = FluidTextureManager.getColor(type);
     light = withBlockLight(light, type.getLightLevel(fluid));
 
     // determine height based on fluid amount
@@ -346,36 +338,24 @@ public class FluidRenderer {
     renderCuboid(matrices, buffer.getBuffer(MantleRenderTypes.FLUID), cube, still, flowing, from, to, color, light, isGas);
   }
 
-  /** Same as {@link net.minecraft.client.renderer.ScreenEffectRenderer#renderFluid(Minecraft, PoseStack, ResourceLocation)} but with opacity and color control */
-  public static void renderCamera(Minecraft minecraft, PoseStack poseStack, ResourceLocation texture, float opacity, int color) {
-    assert minecraft.player != null;
-    RenderSystem.setShader(GameRenderer::getPositionTexShader);
-    RenderSystem.setShaderTexture(0, texture);
-    BufferBuilder buffer = Tesselator.getInstance().getBuilder();
-    BlockPos pos = BlockPos.containing(minecraft.player.getX(), minecraft.player.getEyeY(), minecraft.player.getZ());
-    Level level = minecraft.player.level();
-    float brightness = LightTexture.getBrightness(level.dimensionType(), level.getMaxLocalRawBrightness(pos));
-    RenderSystem.enableBlend();
-    // apply fluid tint if one is set
-    if (color != -1) {
-      RenderSystem.setShaderColor(
-        brightness * (color >> 16 & 255) / 255f,
-        brightness * (color >> 8 & 255) / 255f,
-        brightness * (color & 255) / 255f,
-        opacity * (color >>> 24) / 255f);
-    } else {
-      RenderSystem.setShaderColor(brightness, brightness, brightness, opacity);
-    }
-    float yRot = -minecraft.player.getYRot() / 64;
-    float xRot = minecraft.player.getXRot() / 64;
+  /**
+   * Renders a full-screen camera overlay (e.g. fluid submerge effect).
+   * Uses the entity translucent pipeline with the block atlas texture.
+   */
+  public static void renderCamera(Minecraft minecraft, PoseStack poseStack, Identifier texture, float opacity, int color) {
+    VertexConsumer builder = minecraft.renderBuffers().bufferSource().getBuffer(RenderTypes.entityTranslucent(TextureAtlas.LOCATION_BLOCKS));
+    TextureAtlasSprite sprite = getBlockSprite(texture);
+    if (sprite == null) return;
+
     Matrix4f matrix = poseStack.last().pose();
-    buffer.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX);
-    buffer.vertex(matrix, -1, -1, -0.5f).uv(4 + yRot, 4 + xRot).endVertex();
-    buffer.vertex(matrix,  1, -1, -0.5f).uv(0 + yRot, 4 + xRot).endVertex();
-    buffer.vertex(matrix,  1,  1, -0.5f).uv(0 + yRot, 0 + xRot).endVertex();
-    buffer.vertex(matrix, -1,  1, -0.5f).uv(4 + yRot, 0 + xRot).endVertex();
-    BufferUploader.drawWithShader(buffer.end());
-    RenderSystem.setShaderColor(1, 1, 1, 1);
-    RenderSystem.disableBlend();
+    int a = (int) ((color >> 24 & 0xFF) * opacity);
+    int r = color >> 16 & 0xFF;
+    int g = color >> 8 & 0xFF;
+    int b = color & 0xFF;
+
+    builder.addVertex(matrix, -1, -1, -0.5F).setColor(r, g, b, a).setUv(sprite.getU0(), sprite.getV0()).setUv2(240, 240);
+    builder.addVertex(matrix,  1, -1, -0.5F).setColor(r, g, b, a).setUv(sprite.getU1(), sprite.getV0()).setUv2(240, 240);
+    builder.addVertex(matrix,  1,  1, -0.5F).setColor(r, g, b, a).setUv(sprite.getU1(), sprite.getV1()).setUv2(240, 240);
+    builder.addVertex(matrix, -1,  1, -0.5F).setColor(r, g, b, a).setUv(sprite.getU0(), sprite.getV1()).setUv2(240, 240);
   }
 }

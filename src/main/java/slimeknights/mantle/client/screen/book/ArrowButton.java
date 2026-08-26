@@ -1,13 +1,20 @@
 package slimeknights.mantle.client.screen.book;
 
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.renderer.RenderPipelines;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.client.renderer.RenderPipelines;
+import net.minecraft.resources.Identifier;
+import net.minecraft.client.renderer.RenderPipelines;
 import slimeknights.mantle.client.book.data.BookData;
 
+import net.minecraft.client.renderer.RenderPipelines;
 import javax.annotation.Nullable;
 
+import net.minecraft.client.renderer.RenderPipelines;
 import static slimeknights.mantle.client.screen.book.Textures.TEX_BOOK;
 
 public class ArrowButton extends Button {
@@ -36,34 +43,20 @@ public class ArrowButton extends Button {
   }
 
   /** Shared logic between public method and vanilla method */
-  private void renderButton(GuiGraphics graphics, @Nullable BookData bookData) {
-    ResourceLocation texture;
-    if (bookData != null) {
-      texture = bookData.appearance.getBookTexture();
-    } else {
-      texture = TEX_BOOK;
-    }
-
-    int color = this.isHovered ? this.hoverColor : this.color;
-
-    float r = ((color >> 16) & 0xff) / 255.F;
-    float g = ((color >> 8) & 0xff) / 255.F;
-    float b = (color & 0xff) / 255.F;
-
-    graphics.setColor(r, g, b, 1f);
-    graphics.blit(texture, this.getX(), this.getY(), this.width, this.height, this.arrowType.x, this.arrowType.y, this.width, this.height, 512, 512);
-    graphics.setColor(1, 1, 1, 1);
-//    this.renderBg(graphics, mouseX, mouseY, partialTicks);
+  private void renderButton(GuiGraphicsExtractor graphics, @Nullable BookData bookData) {
+    Identifier texture = bookData != null ? bookData.appearance.getBookTexture() : TEX_BOOK;
+    int color = (this.isHovered ? this.hoverColor : this.color) | 0xFF000000;
+    graphics.blit(RenderPipelines.GUI_TEXTURED, texture, this.getX(), this.getY(), this.arrowType.x, this.arrowType.y, this.width, this.height, 512, 512, color);
   }
 
   /** Public method to swap out book data on rendering */
-  public void renderButton(GuiGraphics graphics, int mouseX, int mouseY, float pPartialTick, @Nullable BookData bookData) {
+  public void renderButton(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float pPartialTick, @Nullable BookData bookData) {
     this.isHovered = mouseX >= this.getX() && mouseY >= this.getY() && mouseX < this.getX() + this.width && mouseY < this.getY() + this.height;
     renderButton(graphics, bookData);
   }
 
   @Override
-  protected void renderWidget(GuiGraphics graphics, int pMouseX, int pMouseY, float pPartialTick) {
+  protected void extractContents(GuiGraphicsExtractor graphics, int pMouseX, int pMouseY, float pPartialTick) {
     renderButton(graphics, bookData);
   }
 

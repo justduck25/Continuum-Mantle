@@ -6,10 +6,13 @@ import net.minecraft.commands.CommandBuildContext;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.SharedSuggestionProvider;
-import net.minecraft.world.level.GameRules;
-import net.minecraft.world.level.storage.loot.LootDataType;
-import net.minecraftforge.common.MinecraftForge;
-import net.minecraftforge.event.RegisterCommandsEvent;
+import net.minecraft.world.level.gamerules.GameRules;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.server.permissions.Permission;
+import net.minecraft.server.permissions.PermissionLevel;
+import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import slimeknights.mantle.command.argument.TagSourceArgument;
 import slimeknights.mantle.command.tags.ModifyTagCommand;
 
@@ -47,13 +50,13 @@ public class MantleCommand {
     TagSourceArgument.registerSuggestions();
 
     // register interesting sources
-    SourcesCommand.register(LootDataType.TABLE.directory(), (context, builder)
-      -> SharedSuggestionProvider.suggestResource(context.getSource().getServer().getLootData().getKeys(LootDataType.TABLE), builder));
+    SourcesCommand.register("loot_table", (context, builder)
+      -> SharedSuggestionProvider.suggestResource(context.getSource().getServer().reloadableRegistries().lookup().lookupOrThrow(Registries.LOOT_TABLE).listElementIds().map(ResourceKey::identifier), builder));
     SourcesCommand.register("recipes", (context, builder)
-      -> SharedSuggestionProvider.suggestResource(context.getSource().getRecipeNames(), builder));
+      -> SharedSuggestionProvider.suggestResource(context.getSource().getServer().getRecipeManager().getRecipes().stream().map(recipe -> recipe.id().identifier()), builder));
 
     // add command listener
-    MinecraftForge.EVENT_BUS.addListener(MantleCommand::registerCommand);
+    NeoForge.EVENT_BUS.addListener(MantleCommand::registerCommand);
   }
 
   /** Registers a sub command for the root Mantle command */
@@ -80,7 +83,7 @@ public class MantleCommand {
     register(builder, "dump_loot_modifiers", DumpLootModifiers::register);
     register(builder, "harvest_tiers", HarvestTiersCommand::register);
     register(builder, "remove", b -> {
-      b = b.requires(sender -> sender.hasPermission(MantleCommand.PERMISSION_GAME_COMMANDS));
+      b = b.requires(sender -> MantleCommand.hasPermission(sender, MantleCommand.PERMISSION_GAME_COMMANDS));
       register(b, "recipes", b2 -> RemoveRecipesCommand.register(b2, context));
       RemoveDataCommand.register(b);
     });
@@ -96,6 +99,11 @@ public class MantleCommand {
 
   /* Helpers */
 
+
+  /** Bridges Mantle's legacy numeric permission levels to Minecraft's permission set model. */
+  public static boolean hasPermission(CommandSourceStack source, int level) {
+    return source.permissions().hasPermission(new Permission.HasCommandLevel(PermissionLevel.byId(level)));
+  }
   /**
    * Returns true if the source either does not have reduced debug info or they have the proper level
    * Allows limiting a command that prints debug info to not work in reduced debug info
@@ -104,6 +112,6 @@ public class MantleCommand {
    * @return  True if the command can be run
    */
   public static boolean requiresDebugInfoOrOp(CommandSourceStack source, int reducedDebugLevel) {
-    return !source.getLevel().getGameRules().getBoolean(GameRules.RULE_REDUCEDDEBUGINFO) || source.hasPermission(reducedDebugLevel);
+    return hasPermission(source, reducedDebugLevel);
   }
 }

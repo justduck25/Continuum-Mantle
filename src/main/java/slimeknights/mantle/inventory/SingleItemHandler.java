@@ -2,10 +2,14 @@ package slimeknights.mantle.inventory;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+import com.mojang.serialization.Dynamic;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtOps;
+import net.minecraft.resources.RegistryOps;
+import net.minecraft.core.RegistryAccess;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.items.IItemHandlerModifiable;
-import net.minecraftforge.items.ItemHandlerHelper;
+import net.neoforged.neoforge.items.IItemHandlerModifiable;
 import slimeknights.mantle.block.entity.MantleBlockEntity;
 
 import javax.annotation.Nonnull;
@@ -89,11 +93,11 @@ public abstract class SingleItemHandler<T extends MantleBlockEntity> implements 
           // insert up to the stack limit
           int size = Math.min(stack.getCount(), getSlotLimit(0));
           if (!simulate) {
-            this.setStack(ItemHandlerHelper.copyStackWithSize(stack, size));
+            this.setStack(stack.copyWithCount(size));
           }
-          return ItemHandlerHelper.copyStackWithSize(stack, stack.getCount() - size);
+          return stack.copyWithCount(stack.getCount() - size);
         }
-      } else if (ItemHandlerHelper.canItemStacksStack(current, stack)) {
+      } else if (ItemStack.isSameItemSameComponents(current, stack)) {
         // increase up to the stack limit
         int added = Math.min(stack.getCount(), getSlotLimit(0) - current.getCount());
         if (added > 0) {
@@ -101,7 +105,7 @@ public abstract class SingleItemHandler<T extends MantleBlockEntity> implements 
             current.grow(added);
             setStack(current);
           }
-          return ItemHandlerHelper.copyStackWithSize(stack, stack.getCount() - added);
+          return stack.copyWithCount(stack.getCount() - added);
         }
       }
     }
@@ -120,9 +124,9 @@ public abstract class SingleItemHandler<T extends MantleBlockEntity> implements 
 
     // if amount is less than our size, need to do some shrinking
     if (amount < stack.getCount()) {
-      ItemStack result = ItemHandlerHelper.copyStackWithSize(stack, amount);
+      ItemStack result = stack.copyWithCount(amount);
       if (!simulate) {
-        setStack(ItemHandlerHelper.copyStackWithSize(stack, stack.getCount() - amount));
+        setStack(stack.copyWithCount(stack.getCount() - amount));
       }
       return result;
     }
@@ -143,7 +147,7 @@ public abstract class SingleItemHandler<T extends MantleBlockEntity> implements 
   public CompoundTag writeToNBT() {
     CompoundTag nbt = new CompoundTag();
     if (!stack.isEmpty()) {
-      stack.save(nbt);
+      nbt = ItemStack.OPTIONAL_CODEC.encodeStart(RegistryOps.create(NbtOps.INSTANCE, RegistryAccess.fromRegistryOfRegistries(BuiltInRegistries.REGISTRY)), stack).getOrThrow(IllegalStateException::new).asCompound().orElseGet(CompoundTag::new);
     }
     return nbt;
   }
@@ -153,6 +157,6 @@ public abstract class SingleItemHandler<T extends MantleBlockEntity> implements 
    * @param nbt  NBT
    */
   public void readFromNBT(CompoundTag nbt) {
-    stack = ItemStack.of(nbt);
+    stack = ItemStack.OPTIONAL_CODEC.parse(new Dynamic<>(RegistryOps.create(NbtOps.INSTANCE, RegistryAccess.fromRegistryOfRegistries(BuiltInRegistries.REGISTRY)), nbt)).getOrThrow(IllegalStateException::new);
   }
 }

@@ -1,9 +1,8 @@
 package slimeknights.mantle.client.screen.book;
 
-import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.locale.Language;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.FormattedText;
@@ -32,11 +31,12 @@ public class TextComponentDataRenderer {
    * @return the action if there's any
    */
   // TODO: can we merge this with TextDataRenderer, put the differences in TextData vs TextComponentData?
-  public static String drawText(GuiGraphics graphics, int x, int y, int boxWidth, int boxHeight, TextComponentData[] data, int mouseX, int mouseY, Font fr, List<Component> tooltip) {
+  public static String drawText(GuiGraphicsExtractor graphics, int x, int y, int boxWidth, int boxHeight, TextComponentData[] data, int mouseX, int mouseY, Font fr, List<Component> tooltip) {
     String action = "";
 
     int atX = x;
     int atY = y;
+    int topY = y;
 
     float prevScale = 1.F;
 
@@ -52,7 +52,7 @@ public class TextComponentDataRenderer {
       if (item.text == null) {
         if (item.linebreak) {
           atX = x;
-          atY += fr.lineHeight;
+          atY += scaledLineHeight(fr, prevScale);
         }
         continue;
       }
@@ -60,18 +60,26 @@ public class TextComponentDataRenderer {
       // TODO: ditch this, the linebreak field handles it so much better
       if (item.text.getString().equals("\n")) {
         atX = x;
-        atY += fr.lineHeight;
+        atY += scaledLineHeight(fr, prevScale);
         continue;
       }
 
       if (item.isParagraph) {
         atX = x;
-        atY += fr.lineHeight * 2 * prevScale;
+        atY += scaledLineHeight(fr, prevScale) * 2;
       }
 
       prevScale = item.scale;
+      int lineHeight = scaledLineHeight(fr, item.scale);
 
-      List<FormattedText> textLines = splitTextComponentBySize(item.text, boxWidth, boxHeight - (atY - y), boxWidth - (atX - x), fr, item.scale);
+      int remainingHeight = boxHeight - (atY - topY);
+      if (remainingHeight <= 0) {
+        break;
+      }
+      List<FormattedText> textLines = splitTextComponentBySize(item.text, boxWidth, remainingHeight, boxWidth - (atX - x), fr, item.scale);
+      if (textLines.isEmpty()) {
+        break;
+      }
 
       box1X = atX;
       box1Y = atY;
@@ -88,7 +96,7 @@ public class TextComponentDataRenderer {
         drawScaledTextComponent(graphics, fr, textComponent, atX, atY, item.dropShadow, item.scale);
 
         if (lineNumber < textLines.size() - 1) {
-          atY += fr.lineHeight;
+          atY += lineHeight;
           atX = x;
         }
 
@@ -109,7 +117,7 @@ public class TextComponentDataRenderer {
       // if specified, include a trailing linebreak, works better than a separate linebreak element on handling whitespace
       if (item.linebreak || atX - x >= boxWidth) {
         atX = x;
-        atY += fr.lineHeight * item.scale;
+        atY += lineHeight;
       }
 
       box3W = atX;
@@ -137,12 +145,10 @@ public class TextComponentDataRenderer {
         }
       }
 
-      if (atY >= y + boxHeight) {
-        graphics.drawString(fr, "...", atX, atY, 0, item.dropShadow);
+      if (atY >= topY + boxHeight) {
+        graphics.textRenderer().accept(x, Math.max(topY, topY + boxHeight - lineHeight), net.minecraft.network.chat.Component.literal("..."));
         break;
       }
-
-      y = atY;
     }
 
     if (BookScreen.debug && !action.isEmpty()) {
@@ -163,22 +169,35 @@ public class TextComponentDataRenderer {
    * @return the list of split text components based on the given size
    */
   public static List<FormattedText> splitTextComponentBySize(Component textComponent, int width, int height, int firstWidth, Font fontRenderer, float scale) {
-    int curWidth = (int) (fontRenderer.width(textComponent) * scale);
+    int lineHeight = scaledLineHeight(fontRenderer, scale);
+    int maxLines = height / lineHeight;
+    if (maxLines <= 0) {
+      return List.of();
+    }
+    int scaledWidth = Math.max(1, (int)Math.floor(width / scale));
+    int scaledFirstWidth = Math.max(1, (int)Math.floor(firstWidth / scale));
+    int curWidth = fontRenderer.width(textComponent);
 
-    int curHeight = (int) (fontRenderer.lineHeight * scale);
-    boolean needsWrap = false;
     List<FormattedText> textLines = new ArrayList<>();
 
-    if ((curHeight == (int) (fontRenderer.lineHeight * scale) && curWidth > firstWidth) || (curHeight != (int) (fontRenderer.lineHeight * scale) && curWidth > width)) {
-      needsWrap = true;
-    }
-
-    if (needsWrap) {
-      textLines = new ArrayList<>(fontRenderer.getSplitter().splitLines(textComponent, firstWidth, Style.EMPTY));
+    if (curWidth > scaledFirstWidth) {
+      textLines = new ArrayList<>(fontRenderer.getSplitter().splitLines(textComponent, scaledFirstWidth, Style.EMPTY));
     } else {
       textLines.add(textComponent);
     }
 
+    if (textLines.size() > 1 && scaledFirstWidth != scaledWidth) {
+      List<FormattedText> wrappedLines = new ArrayList<>();
+      wrappedLines.add(textLines.get(0));
+      for (int i = 1; i < textLines.size(); i++) {
+        wrappedLines.addAll(fontRenderer.getSplitter().splitLines(textLines.get(i), scaledWidth, Style.EMPTY));
+      }
+      textLines = wrappedLines;
+    }
+
+    if (textLines.size() > maxLines) {
+      return textLines.subList(0, maxLines);
+    }
     return textLines;
   }
 
@@ -193,13 +212,17 @@ public class TextComponentDataRenderer {
    * @param dropShadow    if there should be a shadow on the text
    * @param scale         the scale to render as
    */
-  public static void drawScaledTextComponent(GuiGraphics graphics, Font font, FormattedText textComponent, float x, float y, boolean dropShadow, float scale) {
-    PoseStack poseStack = graphics.pose();
-    poseStack.pushPose();
-    poseStack.translate(x, y, 0);
-    poseStack.scale(scale, scale, 1F);
+  public static void drawScaledTextComponent(GuiGraphicsExtractor graphics, Font font, FormattedText textComponent, float x, float y, boolean dropShadow, float scale) {
+    var poseStack = graphics.pose();
+    poseStack.pushMatrix();
+    poseStack.translate(x, y);
+    poseStack.scale(scale, scale);
 
-    graphics.drawString(font, Language.getInstance().getVisualOrder(textComponent), 0, 0, 0, dropShadow);
-    poseStack.popPose();
+    graphics.text(font, Language.getInstance().getVisualOrder(textComponent), 0, 0, 0xFF000000, dropShadow);
+    poseStack.popMatrix();
+  }
+
+  private static int scaledLineHeight(Font fontRenderer, float scale) {
+    return Math.max(1, (int)Math.ceil(fontRenderer.lineHeight * scale));
   }
 }

@@ -1,19 +1,21 @@
 package slimeknights.mantle.recipe.crafting;
 
-import com.google.gson.JsonObject;
 import lombok.RequiredArgsConstructor;
-import net.minecraft.data.recipes.FinishedRecipe;
+import net.minecraft.advancements.Advancement;
+import net.minecraft.advancements.AdvancementHolder;
+import net.minecraft.core.HolderSet;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.data.recipes.RecipeOutput;
 import net.minecraft.data.recipes.ShapedRecipeBuilder;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.crafting.Ingredient;
-import net.minecraft.world.item.crafting.RecipeSerializer;
-import slimeknights.mantle.Mantle;
-import slimeknights.mantle.recipe.MantleRecipes;
-
-import javax.annotation.Nullable;
-import java.util.function.Consumer;
+import net.minecraft.world.item.crafting.Recipe;
+import net.minecraft.world.item.crafting.ShapedRecipe;
+import net.neoforged.neoforge.common.conditions.ICondition;
 
 @SuppressWarnings("unused")
 @RequiredArgsConstructor(staticName = "fromShaped")
@@ -23,111 +25,73 @@ public class ShapedRetexturedRecipeBuilder {
   private char textureKey = '\0';
   private boolean matchAll = false;
 
-  /**
-   * Sets the texture source to the given ingredient
-   * @param texture Ingredient to use for texture
-   * @return Builder instance
-   */
   public ShapedRetexturedRecipeBuilder setSource(Ingredient texture) {
     this.texture = texture;
     this.textureKey = '\0';
     return this;
   }
 
-  /**
-   * Sets the texture source to the given tag
-   * @param tag Tag to use for texture
-   * @return Builder instance
-   */
   public ShapedRetexturedRecipeBuilder setSource(TagKey<Item> tag) {
-    return setSource(Ingredient.of(tag));
+    return setSource(Ingredient.of(HolderSet.emptyNamed(BuiltInRegistries.ITEM, tag)));
   }
 
-  /** Sets the texture source to a key from the texture map. Is not validated as that is too much work. */
+  /** Sets the texture source to a key from the texture map. */
   public ShapedRetexturedRecipeBuilder setSource(char textureKey) {
     this.textureKey = textureKey;
     this.texture = null;
     return this;
   }
 
-  /**
-   * Sets the match first property on the recipe.
-   * If set, the recipe uses the first ingredient match for the texture. If unset, all items that match the ingredient must be the same or no texture is applied
-   * @return Builder instance
-   */
   public ShapedRetexturedRecipeBuilder setMatchAll() {
     this.matchAll = true;
     return this;
   }
 
-  /**
-   * Builds the recipe with the default name using the given consumer
-   * @param consumer Recipe consumer
-   */
-  public void build(Consumer<FinishedRecipe> consumer) {
-    this.validate();
-    parent.save(base -> consumer.accept(new Result(base)));
+  private RecipeOutput wrap(RecipeOutput consumer) {
+    return new RecipeOutput() {
+      @Override
+      public void accept(ResourceKey<Recipe<?>> key, Recipe<?> recipe, AdvancementHolder advancement, ICondition... conditions) {
+        if (recipe instanceof ShapedRecipe shaped) {
+          Ingredient tex = texture;
+          if (textureKey != '\0') {
+            tex = ShapedRetexturedRecipe.emptyIngredient();
+          }
+          consumer.accept(key, new ShapedRetexturedRecipe(shaped, tex, matchAll), advancement, conditions);
+        } else {
+          consumer.accept(key, recipe, advancement, conditions);
+        }
+      }
+
+      @Override
+      public Advancement.Builder advancement() {
+        return consumer.advancement();
+      }
+
+      @Override
+      public void includeRootAdvancement() {
+        consumer.includeRootAdvancement();
+      }
+    };
   }
 
-  /**
-   * Builds the recipe using the given consumer
-   * @param consumer Recipe consumer
-   * @param location Recipe location
-   */
-  public void build(Consumer<FinishedRecipe> consumer, ResourceLocation location) {
+  public void build(RecipeOutput consumer) {
     this.validate();
-    parent.save(base -> consumer.accept(new Result(base)), location);
+    parent.save(wrap(consumer));
   }
 
-  /**
-   * Ensures this recipe can be built
-   * @throws IllegalStateException If the recipe cannot be built
-   */
+  public void build(RecipeOutput consumer, Identifier location) {
+    this.validate();
+    parent.save(wrap(consumer), ResourceKey.create(Registries.RECIPE, location));
+  }
+
+  public void build(RecipeOutput consumer, ResourceKey<Recipe<?>> location) {
+    this.validate();
+    parent.save(wrap(consumer), location);
+  }
+
   private void validate() {
     if (texture == null && textureKey == '\0') {
       throw new IllegalStateException("No texture defined for texture recipe");
-    }
-  }
-
-  private class Result implements FinishedRecipe {
-    private final FinishedRecipe base;
-
-    private Result(FinishedRecipe base) {
-      this.base = base;
-    }
-
-    @Override
-    public RecipeSerializer<?> getType() {
-      return MantleRecipes.CRAFTING_SHAPED_RETEXTURED.get();
-    }
-
-    @Override
-    public ResourceLocation getId() {
-      return base.getId();
-    }
-
-    @Override
-    public void serializeRecipeData(JsonObject json) {
-      base.serializeRecipeData(json);
-      if (textureKey != '\0') {
-        json.addProperty("texture", textureKey);
-      } else if (texture != null) {
-        json.add("texture", texture.toJson());
-        Mantle.logger.warn("Using deprecated ingredient format on texture for shaped retextured recipe {}. Use key instead.", getId());
-      }
-      json.addProperty("match_all", matchAll);
-    }
-
-    @Nullable
-    @Override
-    public JsonObject serializeAdvancement() {
-      return base.serializeAdvancement();
-    }
-
-    @Nullable
-    @Override
-    public ResourceLocation getAdvancementId() {
-      return base.getAdvancementId();
     }
   }
 }

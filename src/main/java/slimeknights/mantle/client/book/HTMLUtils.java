@@ -18,12 +18,12 @@ import java.util.Arrays;
  * @see HtmlElement
  */
 public class HTMLUtils {
-  private static final char COLOR_CHAR = '§';
+  private static final char COLOR_CHAR = '\u00A7';
   private static final String LOOKUP = "0123456789abcdefklmnor";
 
   /**
    * Parses any chat formatting in to HTML.
-   * Does not support Obfuscated §k
+   * Does not support Obfuscated ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§k
    *
    * @param text Minecraft chat formated string
    * @return this as HTML span tag

@@ -1,6 +1,6 @@
 package slimeknights.mantle.registration;
 
-import lombok.Setter;
+
 
 import javax.annotation.Nullable;
 import java.util.function.Supplier;
@@ -11,9 +11,12 @@ import java.util.function.Supplier;
  * @param <T>  Supplier type
  */
 public class DelayedSupplier<T> implements Supplier<T> {
-  @Setter
   @Nullable
   private Supplier<? extends T> supplier;
+
+  public void setSupplier(Supplier<? extends T> supplier) {
+    this.supplier = supplier;
+  }
 
   @Override
   public T get() {

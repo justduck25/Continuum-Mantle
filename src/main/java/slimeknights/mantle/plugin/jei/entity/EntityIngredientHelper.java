@@ -4,7 +4,7 @@ import mezz.jei.api.ingredients.IIngredientHelper;
 import mezz.jei.api.ingredients.IIngredientType;
 import mezz.jei.api.ingredients.subtypes.UidContext;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import slimeknights.mantle.plugin.jei.MantleJEIConstants;
 import slimeknights.mantle.recipe.ingredient.EntityIngredient;
 
@@ -23,12 +23,12 @@ public class EntityIngredientHelper implements IIngredientHelper<EntityIngredien
   }
 
   @Override
-  public String getUniqueId(EntityIngredient.EntityInput type, UidContext context) {
-    return getResourceLocation(type).toString();
+  public Object getUid(EntityIngredient.EntityInput type, UidContext context) {
+    return getIdentifier(type).toString();
   }
 
   @Override
-  public ResourceLocation getResourceLocation(EntityIngredient.EntityInput type) {
+  public Identifier getIdentifier(EntityIngredient.EntityInput type) {
     return BuiltInRegistries.ENTITY_TYPE.getKey(type.type());
   }
 
@@ -42,6 +42,6 @@ public class EntityIngredientHelper implements IIngredientHelper<EntityIngredien
     if (type == null) {
       return "null";
     }
-    return getResourceLocation(type).toString();
+    return getIdentifier(type).toString();
   }
 }

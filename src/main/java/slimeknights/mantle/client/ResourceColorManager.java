@@ -7,8 +7,10 @@ import lombok.NoArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import net.minecraft.network.chat.TextColor;
 import net.minecraft.server.packs.resources.ResourceManager;
-import net.minecraftforge.client.event.RegisterClientReloadListenersEvent;
+import net.neoforged.neoforge.client.event.AddClientReloadListenersEvent;
+import slimeknights.mantle.Mantle;
 import slimeknights.mantle.data.listener.ISafeManagerReloadListener;
+import slimeknights.mantle.Mantle;
 import slimeknights.mantle.util.JsonHelper;
 
 import javax.annotation.Nullable;
@@ -38,8 +40,8 @@ public class ResourceColorManager implements ISafeManagerReloadListener {
    * Initializes this manager, registering it with the resource manager
    * @param manager  Manager
    */
-  public static void init(RegisterClientReloadListenersEvent manager) {
-    manager.registerReloadListener(INSTANCE);
+  public static void init(AddClientReloadListenersEvent manager) {
+    manager.addListener(Mantle.getResource("resource_color_manager"), INSTANCE);
   }
 
   /** Recursively parses the given objects */
@@ -55,7 +57,7 @@ public class ResourceColorManager implements ISafeManagerReloadListener {
         String fullPath = prefix + key;
         if (!colors.containsKey(fullPath)) {
           String text = element.getAsString();
-          TextColor color = TextColor.parseColor(text);
+          TextColor color = TextColor.parseColor(text).result().orElse(null);
           if (color == null) {
             log.error("Color at key '{}' could not be parsed, got '{}'", fullPath, text);
           } else {

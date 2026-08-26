@@ -6,11 +6,17 @@ import com.mojang.serialization.Codec;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.core.Holder;
+import net.minecraft.core.component.DataComponentMap;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.world.item.component.CustomData;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.tags.TagKey;
 import net.minecraft.util.GsonHelper;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.ItemStackTemplate;
 import net.minecraft.world.level.ItemLike;
 import slimeknights.mantle.data.loadable.LoadableCodec;
 import slimeknights.mantle.data.loadable.Loadables;
@@ -19,6 +25,7 @@ import slimeknights.mantle.data.loadable.common.NBTLoadable;
 import slimeknights.mantle.data.loadable.field.LoadableField;
 import slimeknights.mantle.data.loadable.primitive.IntLoadable;
 import slimeknights.mantle.data.loadable.record.RecordLoadable;
+import slimeknights.mantle.util.JsonHelper;
 import slimeknights.mantle.util.typed.TypedMap;
 
 import javax.annotation.Nullable;
@@ -51,7 +58,20 @@ public abstract class ItemOutput implements Supplier<ItemStack> {
    * @return  Item output
    */
   public final ItemStack copy() {
-    return get().copy();
+    return copyForOutput(get());
+  }
+
+  /** Copies stacks loaded before registry components bind back onto their real registry holder. */
+  private static ItemStack copyForOutput(ItemStack stack) {
+    if (stack.isEmpty()) {
+      return ItemStack.EMPTY;
+    }
+    if (stack.typeHolder().kind() == Holder.Kind.REFERENCE || !stack.getItem().builtInRegistryHolder().areComponentsBound()) {
+      return stack.copy();
+    }
+    ItemStack copy = new ItemStack(stack.getItem().builtInRegistryHolder(), stack.getCount(), stack.getComponentsPatch());
+    copy.setPopTime(stack.getPopTime());
+    return copy;
   }
 
   /** Gets the size of the output without resolving the stack */
@@ -87,7 +107,17 @@ public abstract class ItemOutput implements Supplier<ItemStack> {
     return new OfStack(stack);
   }
 
+  
   /**
+   * Creates a new output from an item stack template. This avoids constructing live ItemStacks during datagen.
+   * @param template  Stack template
+   * @return  Output
+   */
+  public static ItemOutput fromTemplate(ItemStackTemplate template) {
+    return new OfTemplate(template);
+  }
+
+/**
    * Creates a new output for the given item
    * @param item  Item
    * @param count Stack count
@@ -141,7 +171,11 @@ public abstract class ItemOutput implements Supplier<ItemStack> {
    * @param buffer  Packet buffer instance
    */
   public void write(FriendlyByteBuf buffer) {
-    buffer.writeItem(get());
+    if (buffer instanceof RegistryFriendlyByteBuf registryBuffer) {
+      ItemStack.OPTIONAL_STREAM_CODEC.encode(registryBuffer, get());
+      return;
+    }
+    throw new IllegalArgumentException("ItemOutput network encoding requires RegistryFriendlyByteBuf");
   }
 
   /**
@@ -150,7 +184,10 @@ public abstract class ItemOutput implements Supplier<ItemStack> {
    * @return  Item output
    */
   public static ItemOutput read(FriendlyByteBuf buffer) {
-    return fromStack(buffer.readItem());
+    if (buffer instanceof RegistryFriendlyByteBuf registryBuffer) {
+      return fromStack(ItemStack.OPTIONAL_STREAM_CODEC.decode(registryBuffer));
+    }
+    throw new IllegalArgumentException("ItemOutput network decoding requires RegistryFriendlyByteBuf");
   }
 
   /** Class for an output that is just an item, simplifies NBT for serializing as vanilla forces NBT to be set for tools and forge goes through extra steps when NBT is set */
@@ -164,7 +201,8 @@ public abstract class ItemOutput implements Supplier<ItemStack> {
     @Override
     public ItemStack get() {
       if (cachedStack == null) {
-        cachedStack = new ItemStack(item, count);
+        Holder.Reference<Item> holder = item.builtInRegistryHolder();
+        cachedStack = holder.areComponentsBound() ? new ItemStack(holder, count) : new ItemStack(Holder.direct(item, DataComponentMap.EMPTY), count);
       }
       return cachedStack;
     }
@@ -183,6 +221,34 @@ public abstract class ItemOutput implements Supplier<ItemStack> {
     }
   }
 
+  /** Class for an output backed by a stack template */
+  @RequiredArgsConstructor
+  private static class OfTemplate extends ItemOutput {
+    private final ItemStackTemplate template;
+    private ItemStack cachedStack;
+
+    @Override
+    public ItemStack get() {
+      if (cachedStack == null) {
+        cachedStack = template.create();
+      }
+      return cachedStack;
+    }
+
+    @Override
+    public int getCount() {
+      return template.count();
+    }
+
+    @Override
+    public JsonElement serialize(boolean writeCount) {
+      JsonElement element = JsonHelper.serialize(ItemStackTemplate.CODEC, template);
+      if (!writeCount && element.isJsonObject()) {
+        element.getAsJsonObject().remove("count");
+      }
+      return element;
+    }
+  }
   /** Class for an output that is just a stack */
   @RequiredArgsConstructor
   private static class OfStack extends ItemOutput {
@@ -232,7 +298,7 @@ public abstract class ItemOutput implements Supplier<ItemStack> {
         }
         cachedResult = new ItemStack(preference.orElseThrow(), count);
         if (nbt != null) {
-          cachedResult.setTag(nbt.copy());
+          cachedResult.set(DataComponents.CUSTOM_DATA, CustomData.of(nbt.copy()));
         }
       }
       return cachedResult;

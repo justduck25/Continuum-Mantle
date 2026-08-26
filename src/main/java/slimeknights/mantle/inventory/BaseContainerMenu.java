@@ -13,8 +13,8 @@ import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.fml.DistExecutor;
+import net.neoforged.api.distmarker.Dist;
+
 import slimeknights.mantle.util.BlockEntityHelper;
 
 import javax.annotation.Nullable;
@@ -43,7 +43,7 @@ public class BaseContainerMenu<TILE extends BlockEntity> extends AbstractContain
 
   public void syncOnOpen(ServerPlayer playerOpened) {
     // find another player that already has the gui for this tile open
-    ServerLevel server = playerOpened.serverLevel();
+    ServerLevel server = playerOpened.level();
 
     for (Player player : server.players()) {
       if (player == playerOpened) {
@@ -232,7 +232,7 @@ public class BaseContainerMenu<TILE extends BlockEntity> extends AbstractContain
         slot = this.slots.get(k);
         itemstack1 = slot.getItem();
 
-        if (!itemstack1.isEmpty() && ItemStack.isSameItemSameTags(stack, itemstack1) && this.canTakeItemForPickAll(stack, slot)) {
+        if (!itemstack1.isEmpty() && ItemStack.isSameItemSameComponents(stack, itemstack1) && this.canTakeItemForPickAll(stack, slot)) {
           int l = itemstack1.getCount() + stack.getCount();
           int limit = Math.min(stack.getMaxStackSize(), slot.getMaxStackSize(stack));
 
@@ -322,6 +322,9 @@ public class BaseContainerMenu<TILE extends BlockEntity> extends AbstractContain
     if (buf == null) {
       return null;
     }
-    return DistExecutor.unsafeCallWhenOn(Dist.CLIENT, () -> () -> BlockEntityHelper.get(type, Minecraft.getInstance().level, buf.readBlockPos()).orElse(null));
+    if (Minecraft.getInstance().level == null) {
+      return null;
+    }
+    return BlockEntityHelper.get(type, Minecraft.getInstance().level, buf.readBlockPos()).orElse(null);
   }
 }

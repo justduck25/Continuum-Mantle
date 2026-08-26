@@ -1,12 +1,9 @@
 package slimeknights.mantle.command.argument;
 
-import net.minecraft.core.Holder;
-import net.minecraft.core.HolderSet;
 import net.minecraft.core.Registry;
+import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.tags.TagKey;
-import net.minecraft.tags.TagManager;
 
 import javax.annotation.Nullable;
 import java.util.List;
@@ -21,65 +18,44 @@ public record RegistryTagSource<T>(Registry<T> registry) implements TagSource<T>
 
   @Override
   public String folder() {
-    return TagManager.getTagDir(key());
+    return key().identifier().getPath();
   }
-
-  /* Tags */
 
   @Override
   public boolean hasTag(TagKey<T> tag) {
-    return registry.getTag(tag).isPresent();
+    return false;
   }
 
   @Override
   public Stream<TagKey<T>> tagKeys() {
-    return registry.getTagNames();
+    return Stream.empty();
   }
-
-
-  /* Tag entries */
 
   @Nullable
   @Override
   public List<T> valuesInTag(TagKey<T> tag) {
-    HolderSet.Named<T> holder = registry.getTag(tag).orElse(null);
-    if (holder == null) {
-      return null;
-    }
-    return holder.stream().filter(Holder::isBound).map(Holder::value).toList();
-  }
-
-  @Nullable
-  @Override
-  public List<ResourceLocation> keysInTag(TagKey<T> tag) {
-    HolderSet.Named<T> holder = registry.getTag(tag).orElse(null);
-    if (holder == null) {
-      return null;
-    }
-    // I feel it should be way easier to get a resource location from a holder
-    return holder.stream().filter(Holder::isBound).map(h -> registry.getKey(h.value())).toList();
-  }
-
-
-  /* Entries */
-
-  @Nullable
-  @Override
-  public T getValue(ResourceLocation key) {
-    // prevent defaulting registries from returning their default
-    if (registry.containsKey(key)) {
-      return registry.get(key);
-    }
     return null;
+  }
+
+  @Nullable
+  @Override
+  public List<Identifier> keysInTag(TagKey<T> tag) {
+    return null;
+  }
+
+  @Nullable
+  @Override
+  public T getValue(Identifier key) {
+    return registry.getValue(key);
   }
 
   @Override
   public Stream<TagKey<T>> tagsFor(T value) {
-    return registry.getHolder(registry.getId(value)).stream().flatMap(Holder::getTagKeys);
+    return Stream.empty();
   }
 
   @Override
-  public Stream<ResourceLocation> valueKeys() {
+  public Stream<Identifier> valueKeys() {
     return registry.keySet().stream();
   }
 }

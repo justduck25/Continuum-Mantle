@@ -33,7 +33,7 @@ public class WallBuildingBlockObject extends BuildingBlockObject {
    * @param wall    Wall entry
    */
   public WallBuildingBlockObject(BuildingBlockObject object, Block wall) {
-    this(object, RegistrationHelper.getCastedHolder(BuiltInRegistries.BLOCK, wall));
+    this(object, () -> (WallBlock) wall);
   }
 
   /** Gets the wall for this block */

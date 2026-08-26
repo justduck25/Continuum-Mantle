@@ -16,6 +16,10 @@ public class SingletonLoader<T> implements RecordLoadable<T> {
   @Getter
   private final T instance;
 
+  public T getInstance() {
+    return instance;
+  }
+
   /** Helper for creating a loader using an anonymous class */
   public SingletonLoader(Function<RecordLoadable<T>,T> creator) {
     this.instance = creator.apply(this);

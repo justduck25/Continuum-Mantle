@@ -8,7 +8,7 @@ import lombok.NoArgsConstructor;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.texture.MissingTextureAtlasSprite;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.resources.ResourceManagerReloadListener;
 import net.minecraft.util.GsonHelper;
 import net.minecraft.world.level.block.Block;
@@ -23,7 +23,7 @@ import java.util.function.Function;
  */
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class ModelHelper {
-  private static final Map<Block,ResourceLocation> TEXTURE_NAME_CACHE = new ConcurrentHashMap<>();
+  private static final Map<Block,Identifier> TEXTURE_NAME_CACHE = new ConcurrentHashMap<>();
   /** Listener instance to clear cache */
   public static final ResourceManagerReloadListener LISTENER = manager -> TEXTURE_NAME_CACHE.clear();
 
@@ -33,8 +33,8 @@ public class ModelHelper {
    * @return Texture name for the block
    */
   @SuppressWarnings("deprecation")
-  private static ResourceLocation getParticleTextureInternal(Block block) {
-    TextureAtlasSprite particle = Minecraft.getInstance().getModelManager().getBlockModelShaper().getBlockModel(block.defaultBlockState()).getParticleIcon();
+  private static Identifier getParticleTextureInternal(Block block) {
+    TextureAtlasSprite particle = Minecraft.getInstance().getModelManager().getBlockStateModelSet().getParticleMaterial(block.defaultBlockState()).sprite();
     //noinspection ConstantConditions  dumb mods returning null particle icons
     if (particle != null) {
       return particle.contents().name();
@@ -47,7 +47,7 @@ public class ModelHelper {
    * @param block Block to fetch
    * @return Texture name for the block
    */
-  public static ResourceLocation getParticleTexture(Block block) {
+  public static Identifier getParticleTexture(Block block) {
     return TEXTURE_NAME_CACHE.computeIfAbsent(block, ModelHelper::getParticleTextureInternal);
   }
 

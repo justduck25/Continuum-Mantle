@@ -1,8 +1,8 @@
 package slimeknights.mantle.registration.object;
 
 import lombok.Getter;
-import net.minecraft.tags.BlockTags;
-import net.minecraft.tags.ItemTags;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.Identifier;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.ItemLike;
@@ -11,8 +11,6 @@ import net.minecraft.world.level.block.Block;
 import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
-
-import static slimeknights.mantle.Mantle.commonResource;
 
 /** Object wrapper containing ingots, nuggets, and blocks */
 public class MetalItemObject extends ItemObject<Block> implements MultiObject<ItemLike> {
@@ -31,7 +29,7 @@ public class MetalItemObject extends ItemObject<Block> implements MultiObject<It
     super(block);
     this.ingot = ingot;
     this.nugget = nugget;
-    this.blockTag = BlockTags.create(commonResource("storage_blocks/" + tagName));
+    this.blockTag = blockTag("storage_blocks/" + tagName);
     this.blockItemTag = getTag("storage_blocks/" + tagName);
     this.ingotTag = getTag("ingots/" + tagName);
     this.nuggetTag = getTag("nuggets/" + tagName);
@@ -48,12 +46,21 @@ public class MetalItemObject extends ItemObject<Block> implements MultiObject<It
   }
 
   /**
-   * Creates a tag for a resource
+   * Creates a block tag for a common resource.
+   * @param name  Tag name
+   * @return  Tag
+   */
+  private static TagKey<Block> blockTag(String name) {
+    return TagKey.create(Registries.BLOCK, Identifier.fromNamespaceAndPath("c", name));
+  }
+
+  /**
+   * Creates an item tag for a common resource.
    * @param name  Tag name
    * @return  Tag
    */
   private static TagKey<Item> getTag(String name) {
-    return ItemTags.create(commonResource(name));
+    return TagKey.create(Registries.ITEM, Identifier.fromNamespaceAndPath("c", name));
   }
 
   @Override

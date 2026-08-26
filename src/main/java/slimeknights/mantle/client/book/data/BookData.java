@@ -1,10 +1,12 @@
 package slimeknights.mantle.client.book.data;
 
+import net.neoforged.neoforge.client.network.ClientPacketDistributor;
+
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.resources.Resource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.ItemStack;
@@ -16,7 +18,6 @@ import slimeknights.mantle.client.book.data.content.ContentError;
 import slimeknights.mantle.client.book.repository.BookRepository;
 import slimeknights.mantle.client.book.transformer.BookTransformer;
 import slimeknights.mantle.client.screen.book.BookScreen;
-import slimeknights.mantle.network.MantleNetwork;
 import slimeknights.mantle.network.packet.DropLecternBookPacket;
 
 import javax.annotation.Nullable;
@@ -85,7 +86,7 @@ public class BookData implements IDataItem, BookScreenOpener {
           Mantle.logger.error("Failed to load repository {}.", repo, e);
         }
 
-        ResourceLocation appearanceLocation = repo.getResourceLocation("appearance.json");
+        Identifier appearanceLocation = repo.getIdentifier("appearance.json");
 
         if (repo.resourceExists(appearanceLocation)) {
           try {
@@ -97,7 +98,7 @@ public class BookData implements IDataItem, BookScreenOpener {
 
         this.appearance.load();
 
-        ResourceLocation languageLocation = repo.getResourceLocation("language.lang");
+        Identifier languageLocation = repo.getIdentifier("language.lang");
 
         if (repo.resourceExists(languageLocation)) {
           try {
@@ -122,13 +123,8 @@ public class BookData implements IDataItem, BookScreenOpener {
         }
       }
 
-      // set unicode font if requested
-      if (this.appearance.uniformFont) {
-        this.fontRenderer = BookScreen.getUniformFont();
-      // font is cached in the book data so we need to clear it; but don't clear it if set to another font instance
-      } else if (this.fontRenderer == BookScreen.getUniformFont()) {
-        this.fontRenderer = null;
-      }
+      // Section transformers measure text before BookScreen exists, so keep a concrete font cached here.
+      this.fontRenderer = this.appearance.uniformFont ? BookScreen.getUniformFont() : Minecraft.getInstance().font;
 
       for (int i = 0; i < this.sections.size(); i++) {
         SectionData section = this.sections.get(i);
@@ -401,7 +397,7 @@ public class BookData implements IDataItem, BookScreenOpener {
   public void openGui(BlockPos pos, ItemStack stack) {
     String page = BookHelper.getCurrentSavedPage(stack);
 
-    Consumer<?> bookPickup = (v) -> MantleNetwork.INSTANCE.network.sendToServer(new DropLecternBookPacket(pos));
+    Consumer<?> bookPickup = (v) -> ClientPacketDistributor.sendToServer(new DropLecternBookPacket(pos));
 
     openGui(stack.getHoverName(), page, newPage -> BookLoader.updateSavedPage(pos, newPage), bookPickup);
   }

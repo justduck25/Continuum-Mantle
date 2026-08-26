@@ -1,7 +1,7 @@
 package slimeknights.mantle.data.loadable.primitive;
 
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import slimeknights.mantle.data.loadable.Loadables;
 import slimeknights.mantle.util.JsonHelper;
 import slimeknights.mantle.util.typed.TypedMap;
@@ -12,27 +12,27 @@ import slimeknights.mantle.util.typed.TypedMap;
  * @see Loadables#RESOURCE_LOCATION
  */
 @SuppressWarnings("unused")  // API
-public interface ResourceLocationLoadable<T> extends StringLoadable<T> {
+public interface IdentifierLoadable<T> extends StringLoadable<T> {
   /** Standard implementation of a resource location loadable for raw resource locations. */
-  StringLoadable<ResourceLocation> DEFAULT = new ResourceLocationLoadable<>() {
+  StringLoadable<Identifier> DEFAULT = new IdentifierLoadable<>() {
     @Override
-    public ResourceLocation fromKey(ResourceLocation name, String key, TypedMap context) {
+    public Identifier fromKey(Identifier name, String key, TypedMap context) {
       return name;
     }
 
     @Override
-    public ResourceLocation getKey(ResourceLocation object) {
+    public Identifier getKey(Identifier object) {
       return object;
     }
 
     @Override
-    public ResourceLocation decode(FriendlyByteBuf buffer, TypedMap context) {
-      return buffer.readResourceLocation();
+    public Identifier decode(FriendlyByteBuf buffer, TypedMap context) {
+      return buffer.readIdentifier();
     }
 
     @Override
-    public void encode(FriendlyByteBuf buffer, ResourceLocation value) {
-      buffer.writeResourceLocation(value);
+    public void encode(FriendlyByteBuf buffer, Identifier value) {
+      buffer.writeIdentifier(value);
     }
   };
 
@@ -44,16 +44,16 @@ public interface ResourceLocationLoadable<T> extends StringLoadable<T> {
    * @return  Converted value.'
    * @throws com.google.gson.JsonSyntaxException  If no value exists for that key
    */
-  T fromKey(ResourceLocation name, String key, TypedMap context);
+  T fromKey(Identifier name, String key, TypedMap context);
 
-  /** Same as {@link #fromKey(ResourceLocation, String, TypedMap)} but passes {@link TypedMap#EMPTY} for context. */
-  default T fromKey(ResourceLocation name, String key) {
+  /** Same as {@link #fromKey(Identifier, String, TypedMap)} but passes {@link TypedMap#EMPTY} for context. */
+  default T fromKey(Identifier name, String key) {
     return fromKey(name, key, TypedMap.EMPTY);
   }
 
   @Override
   default T parseString(String value, String key, TypedMap context) {
-    return fromKey(JsonHelper.parseResourceLocation(value, key), key, context);
+    return fromKey(JsonHelper.parseIdentifier(value, key), key, context);
   }
 
   /**
@@ -62,7 +62,7 @@ public interface ResourceLocationLoadable<T> extends StringLoadable<T> {
    * @return  String representation of the object.
    * @throws RuntimeException  if unable to serialize this to a string
    */
-  ResourceLocation getKey(T object);
+  Identifier getKey(T object);
 
   @Override
   default String getString(T object) {

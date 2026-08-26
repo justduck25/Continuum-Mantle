@@ -8,19 +8,21 @@ import com.google.gson.JsonParseException;
 import com.google.gson.JsonSerializationContext;
 import lombok.RequiredArgsConstructor;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
-import net.minecraftforge.fluids.FluidStack;
-import net.minecraftforge.fluids.capability.IFluidHandler;
-import net.minecraftforge.fluids.capability.IFluidHandler.FluidAction;
+import net.neoforged.neoforge.fluids.FluidStack;
+import net.neoforged.neoforge.fluids.capability.IFluidHandler;
+import net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction;
 import org.apache.commons.lang3.function.TriFunction;
 import org.jetbrains.annotations.Nullable;
 import slimeknights.mantle.Mantle;
+import slimeknights.mantle.data.loadable.common.IngredientLoadable;
 import slimeknights.mantle.recipe.helper.FluidOutput;
 import slimeknights.mantle.recipe.helper.ItemOutput;
 import slimeknights.mantle.util.JsonHelper;
+import slimeknights.mantle.util.typed.TypedMap;
 
 import java.lang.reflect.Type;
 import java.util.function.Consumer;
@@ -28,7 +30,7 @@ import java.util.function.Consumer;
 /** Fluid transfer info that empties a fluid from an item */
 @RequiredArgsConstructor
 public class EmptyFluidContainerTransfer implements IFluidContainerTransfer.WithDirection {
-  public static final ResourceLocation ID = Mantle.getResource("empty_item");
+  public static final Identifier ID = Mantle.getResource("empty_item");
 
   protected final Ingredient input;
   protected final ItemOutput result;
@@ -42,11 +44,13 @@ public class EmptyFluidContainerTransfer implements IFluidContainerTransfer.With
 
   @Override
   public void addRepresentativeItems(Consumer<Item> consumer) {
-    for (ItemStack stack : input.getItems()) {
-      consumer.accept(stack.getItem());
+    try {
+      input.items().forEach(holder -> consumer.accept(holder.value()));
+    } catch (UnsupportedOperationException ignored) {
+      // NeoForge may leave tag ingredients unresolved while constructing the sync payload.
+      // Skip those representatives instead of preventing players from joining the world.
     }
   }
-
   @Override
   public boolean matches(ItemStack stack, FluidStack fluid) {
     return input.test(stack);
@@ -81,7 +85,7 @@ public class EmptyFluidContainerTransfer implements IFluidContainerTransfer.With
   public JsonObject serialize(JsonSerializationContext context) {
     JsonObject json = new JsonObject();
     json.addProperty("type", ID.toString());
-    json.add("input", input.toJson());
+    json.add("input", Ingredient.CODEC.encodeStart(JsonHelper.REGISTRY_OPS, input).getOrThrow(IllegalStateException::new));
     if (!result.isEmpty()) {
       json.add("result", result.serialize(false));
     }
@@ -109,7 +113,7 @@ public class EmptyFluidContainerTransfer implements IFluidContainerTransfer.With
     @Override
     public T deserialize(JsonElement element, Type typeOfT, JsonDeserializationContext context) throws JsonParseException {
       JsonObject json = element.getAsJsonObject();
-      Ingredient input = Ingredient.fromJson(JsonHelper.getElement(json, "input"));
+      Ingredient input = IngredientLoadable.DISALLOW_EMPTY.convert(JsonHelper.getElement(json, "input"), "input", TypedMap.EMPTY);
       ItemOutput result = getResult(json);
       FluidOutput fluid = FluidOutput.Loadable.REQUIRED.getIfPresent(json, "fluid");
       return factory.apply(input, result, fluid);

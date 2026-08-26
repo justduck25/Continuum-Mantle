@@ -33,7 +33,7 @@ public class FenceBuildingBlockObject extends BuildingBlockObject {
    * @param fence   Fence entry
    */
   public FenceBuildingBlockObject(BuildingBlockObject object, Block fence) {
-    this(object, RegistrationHelper.getCastedHolder(BuiltInRegistries.BLOCK, fence));
+    this(object, () -> (FenceBlock) fence);
   }
 
   /** Gets the fence for this block */

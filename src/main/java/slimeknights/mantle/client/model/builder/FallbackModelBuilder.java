@@ -2,10 +2,8 @@ package slimeknights.mantle.client.model.builder;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraftforge.client.model.generators.CustomLoaderBuilder;
-import net.minecraftforge.client.model.generators.ModelBuilder;
-import net.minecraftforge.common.data.ExistingFileHelper;
+import net.minecraft.resources.Identifier;
+import net.neoforged.neoforge.client.model.generators.template.CustomLoaderBuilder;
 import slimeknights.mantle.Mantle;
 
 import javax.annotation.Nullable;
@@ -13,21 +11,35 @@ import java.util.ArrayList;
 import java.util.List;
 
 /** Builder for {@link slimeknights.mantle.client.model.FallbackModelLoader} */
-public class FallbackModelBuilder<T extends ModelBuilder<T>> extends CustomLoaderBuilder<T> {
-  private final List<DomainModel<T>> models = new ArrayList<>();
-  public FallbackModelBuilder(ResourceLocation loaderId, T parent, ExistingFileHelper existingFileHelper) {
-    super(Mantle.getResource("fallback"), parent, existingFileHelper);
+public class FallbackModelBuilder extends CustomLoaderBuilder {
+  private final List<DomainModel> models = new ArrayList<>();
+
+  public FallbackModelBuilder() {
+    this(Mantle.getResource("fallback"), false);
+  }
+
+  public FallbackModelBuilder(Identifier loaderId, boolean allowInlineElements) {
+    super(loaderId, allowInlineElements);
   }
 
   /** Adds a fallback model with a domain restriction */
-  public FallbackModelBuilder<T> fallback(T builder, @Nullable String modId) {
-    this.models.add(new DomainModel<>(builder, modId));
+  public FallbackModelBuilder fallback(JsonObject modelJson, @Nullable String modId) {
+    this.models.add(new DomainModel(modelJson, modId));
     return this;
   }
 
   /** Adds a fallback model using the loader ID as the domain restriction */
-  public FallbackModelBuilder<T> fallback(T builder) {
-    return fallback(builder, null);
+  public FallbackModelBuilder fallback(JsonObject modelJson) {
+    return fallback(modelJson, null);
+  }
+
+  @Override
+  protected CustomLoaderBuilder copyInternal() {
+    FallbackModelBuilder copy = new FallbackModelBuilder(loaderId, allowInlineElements);
+    for (DomainModel dm : this.models) {
+      copy.models.add(new DomainModel(dm.modelJson.deepCopy(), dm.domain));
+    }
+    return copy;
   }
 
   @Override
@@ -37,7 +49,7 @@ public class FallbackModelBuilder<T extends ModelBuilder<T>> extends CustomLoade
       throw new IllegalStateException("Must have at least two models to use the fallback loader");
     }
     JsonArray fallbacks = new JsonArray();
-    for (DomainModel<T> builder : models) {
+    for (DomainModel builder : models) {
       fallbacks.add(builder.toJson());
     }
     json.add("models", fallbacks);
@@ -45,10 +57,10 @@ public class FallbackModelBuilder<T extends ModelBuilder<T>> extends CustomLoade
   }
 
   /** Builder with an optional domain restriction */
-  private record DomainModel<T extends ModelBuilder<T>>(T model, @Nullable String domain) {
+  private record DomainModel(JsonObject modelJson, @Nullable String domain) {
     /** Converts this to JSON */
     public JsonObject toJson() {
-      JsonObject json = model.toJson();
+      JsonObject json = modelJson.deepCopy();
       if (domain != null) {
         json.addProperty("fallback_mod_id", domain);
       }

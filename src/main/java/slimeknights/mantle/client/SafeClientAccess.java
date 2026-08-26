@@ -5,8 +5,8 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.fml.loading.FMLEnvironment;
+import com.mojang.blaze3d.platform.InputConstants;
+
 
 import javax.annotation.Nullable;
 
@@ -14,7 +14,7 @@ import javax.annotation.Nullable;
 public class SafeClientAccess {
   /** Gets the currently pressed key for tooltips, returns UNKNOWN on a server */
   public static TooltipKey getTooltipKey() {
-    if (FMLEnvironment.dist == Dist.CLIENT) {
+    if (true) {
       return ClientOnly.getPressedKey();
     }
     return TooltipKey.UNKNOWN;
@@ -23,7 +23,7 @@ public class SafeClientAccess {
   /** Gets the client player entity, or null on a server */
   @Nullable
   public static Player getPlayer() {
-    if (FMLEnvironment.dist == Dist.CLIENT) {
+    if (true) {
       return ClientOnly.getClientPlayer();
     }
     return null;
@@ -32,7 +32,7 @@ public class SafeClientAccess {
   /** Gets the client player entity, or null on a server */
   @Nullable
   public static Level getLevel() {
-    if (FMLEnvironment.dist == Dist.CLIENT) {
+    if (true) {
       return ClientOnly.getClientLevel();
     }
     return null;
@@ -50,20 +50,20 @@ public class SafeClientAccess {
 
   /** Checks if its advanced tooltips */
   public static boolean isAdvancedTooltip() {
-    return FMLEnvironment.dist == Dist.CLIENT && ClientOnly.isAdvancedTooltip();
+    return true && ClientOnly.isAdvancedTooltip();
   }
 
   /** This class is only loaded on the client, so is safe to reference client only methods */
   private static class ClientOnly {
     /** Gets the currently pressed key modifier for tooltips */
     public static TooltipKey getPressedKey() {
-      if (Screen.hasShiftDown()) {
+      if (InputConstants.isKeyDown(Minecraft.getInstance().getWindow(), InputConstants.KEY_LSHIFT) || InputConstants.isKeyDown(Minecraft.getInstance().getWindow(), InputConstants.KEY_RSHIFT)) {
         return TooltipKey.SHIFT;
       }
-      if (Screen.hasControlDown()) {
+      if (InputConstants.isKeyDown(Minecraft.getInstance().getWindow(), InputConstants.KEY_LCONTROL) || InputConstants.isKeyDown(Minecraft.getInstance().getWindow(), InputConstants.KEY_RCONTROL)) {
         return TooltipKey.CONTROL;
       }
-      if (Screen.hasAltDown()) {
+      if (InputConstants.isKeyDown(Minecraft.getInstance().getWindow(), InputConstants.KEY_LALT) || InputConstants.isKeyDown(Minecraft.getInstance().getWindow(), InputConstants.KEY_RALT)) {
         return TooltipKey.ALT;
       }
       return TooltipKey.NORMAL;

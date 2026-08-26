@@ -8,13 +8,13 @@ import com.google.gson.stream.JsonWriter;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.JsonOps;
 import lombok.RequiredArgsConstructor;
-import net.minecraft.Util;
+import net.minecraft.util.Util;
 import net.minecraft.data.CachedOutput;
 import net.minecraft.data.DataGenerator;
 import net.minecraft.data.DataProvider;
 import net.minecraft.data.PackOutput;
 import net.minecraft.data.PackOutput.Target;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.util.GsonHelper;
 import slimeknights.mantle.Mantle;
 import slimeknights.mantle.util.JsonHelper;
@@ -59,7 +59,7 @@ public abstract class GenericDataProvider implements DataProvider {
    * @param location   Location relative to this data provider's root
    * @param object     Object to save, will be converted using this provider's GSON instance
    */
-  protected CompletableFuture<?> saveJson(CachedOutput output, ResourceLocation location, Object object, @Nullable Comparator<String> keyComparator) {
+  protected CompletableFuture<?> saveJson(CachedOutput output, Identifier location, Object object, @Nullable Comparator<String> keyComparator) {
     return saveStable(output, gson.toJsonTree(object), this.pathProvider.json(location), keyComparator).exceptionally(e -> {
       Mantle.logger.error("Couldn't create data for {}", location, e);
       return null;
@@ -72,7 +72,7 @@ public abstract class GenericDataProvider implements DataProvider {
    * @param location   Location relative to this data provider's root
    * @param object     Object to save, will be converted using this provider's GSON instance
    */
-  protected CompletableFuture<?> saveJson(CachedOutput output, ResourceLocation location, Object object) {
+  protected CompletableFuture<?> saveJson(CachedOutput output, Identifier location, Object object) {
     return saveJson(output, location, object, DataProvider.KEY_COMPARATOR);
   }
 
@@ -83,8 +83,33 @@ public abstract class GenericDataProvider implements DataProvider {
    * @param codec      Codec to save the object
    * @param object     Object to save, will be converted using the passed codec
    */
-  protected <T> CompletableFuture<?> saveJson(CachedOutput output, ResourceLocation location, Codec<T> codec, T object) {
-    return saveJson(output, location, codec.encodeStart(JsonOps.INSTANCE, object).getOrThrow(false, Mantle.logger::error));
+  protected <T> CompletableFuture<?> saveJson(CachedOutput output, Identifier location, Codec<T> codec, T object) {
+    return saveJson(output, location, codec.encodeStart(JsonOps.INSTANCE, object).getOrThrow(error -> new IllegalStateException("Failed to encode data: " + error)));
+  }
+
+  /**
+   * Saves the given object to JSON using a wrapper object that exposes getId().
+   */
+  protected CompletableFuture<?> saveJson(CachedOutput output, Object location, Object object) {
+    return saveJson(output, locationAsIdentifier(location), object);
+  }
+
+  /**
+   * Saves the given object to JSON using a wrapper object that exposes getId().
+   */
+  protected <T> CompletableFuture<?> saveJson(CachedOutput output, Object location, Codec<T> codec, T object) {
+    return saveJson(output, locationAsIdentifier(location), codec, object);
+  }
+
+  private static Identifier locationAsIdentifier(Object location) {
+    if (location instanceof Identifier identifier) {
+      return identifier;
+    }
+    try {
+      return (Identifier) location.getClass().getMethod("getId").invoke(location);
+    } catch (ReflectiveOperationException e) {
+      throw new IllegalArgumentException("Unsupported location type: " + location, e);
+    }
   }
 
   /** Combines a stream of completable futures into a single completable future */

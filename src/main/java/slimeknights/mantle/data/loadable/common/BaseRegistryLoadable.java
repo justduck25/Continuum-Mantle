@@ -5,26 +5,35 @@ import io.netty.handler.codec.DecoderException;
 import io.netty.handler.codec.EncoderException;
 import net.minecraft.core.Registry;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.resources.ResourceLocation;
-import slimeknights.mantle.data.loadable.primitive.ResourceLocationLoadable;
+import net.minecraft.resources.Identifier;
+import slimeknights.mantle.data.loadable.primitive.IdentifierLoadable;
 import slimeknights.mantle.util.typed.TypedMap;
 
 import javax.annotation.Nullable;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /** Common logic for {@link RegistryLoadable} and {@link LazyRegistryLoadable} */
-public interface BaseRegistryLoadable<T> extends ResourceLocationLoadable<T> {
+public interface BaseRegistryLoadable<T> extends IdentifierLoadable<T> {
+  Map<Object, Identifier> KEY_CACHE = new ConcurrentHashMap<>();
+
   /** Gets the registry associated with this loadable. Null if the registry cannot be located */
   @Nullable
   Registry<T> registry();
 
   /** Gets the ID of this registry for error messages */
-  ResourceLocation registryId();
+  Identifier registryId();
+
+  /** Registers a custom key mapping for an object that may not be in the registry */
+  static void registerKey(Object object, Identifier id) {
+    KEY_CACHE.put(object, id);
+  }
 
   @Override
-  default T fromKey(ResourceLocation name, String key, TypedMap context) {
+  default T fromKey(Identifier name, String key, TypedMap context) {
     Registry<T> registry = registry();
     if (registry != null && registry.containsKey(name)) {
-      T value = registry.get(name);
+      T value = registry.get(name).map(reference -> reference.value()).orElse(null);
       if (value != null) {
         return value;
       }
@@ -33,10 +42,14 @@ public interface BaseRegistryLoadable<T> extends ResourceLocationLoadable<T> {
   }
 
   @Override
-  default ResourceLocation getKey(T object) {
+  default Identifier getKey(T object) {
+    Identifier cachedKey = KEY_CACHE.get(object);
+    if (cachedKey != null) {
+      return cachedKey;
+    }
     Registry<T> registry = registry();
     if (registry != null) {
-      ResourceLocation location = registry.getKey(object);
+      Identifier location = registry.getKey(object);
       if (location != null) {
         return location;
       }
@@ -63,7 +76,11 @@ public interface BaseRegistryLoadable<T> extends ResourceLocationLoadable<T> {
     if (registry == null) {
       throw new EncoderException("Registry " + registryId() + " cannot be located");
     }
-    buffer.writeId(registry, object);
+    int id = registry.getId(object);
+    if (id < 0) {
+      throw new EncoderException("Registry " + registryId() + " does not contain object " + object);
+    }
+    buffer.writeVarInt(id);
   }
 }
 

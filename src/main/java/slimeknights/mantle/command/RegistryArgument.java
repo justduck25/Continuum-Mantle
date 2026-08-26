@@ -9,11 +9,11 @@ import com.mojang.brigadier.suggestion.SuggestionProvider;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.SharedSuggestionProvider;
-import net.minecraft.commands.arguments.ResourceLocationArgument;
+import net.minecraft.commands.arguments.IdentifierArgument;
 import net.minecraft.core.Registry;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.tags.TagKey;
 import org.jetbrains.annotations.ApiStatus.Internal;
 
@@ -41,11 +41,11 @@ public class RegistryArgument {
   @Internal
   static void registerSuggestions() {
     REGISTRY = register(getResource("registry"), (context, builder) ->
-      SharedSuggestionProvider.suggestResource(context.getSource().registryAccess().registries().map(entry -> entry.key().location()), builder));
+      SharedSuggestionProvider.suggestResource(context.getSource().registryAccess().registries().map(entry -> entry.key().identifier()), builder));
     // TODO 1.21: rename to "registry_tags"
     TAG = register(getResource("valid_tags"), (context, builder) -> {
       Registry<?> result = get(context);
-      return SharedSuggestionProvider.suggestResource(result.getTagNames().map(TagKey::location), builder);
+      return SharedSuggestionProvider.suggestResource(result.listTagIds().map(TagKey::location), builder);
     });
     VALUE = register(getResource("registry_values"), (context, builder) -> {
       Registry<?> result = get(context);
@@ -54,12 +54,12 @@ public class RegistryArgument {
   }
 
   /** Creates an argument instance */
-  public static ArgumentType<ResourceLocation> registry() {
-    return ResourceLocationArgument.id();
+  public static ArgumentType<Identifier> registry() {
+    return IdentifierArgument.id();
   }
 
   /** Creates an argument builder with the given name */
-  public static RequiredArgumentBuilder<CommandSourceStack,ResourceLocation> argument() {
+  public static RequiredArgumentBuilder<CommandSourceStack,Identifier> argument() {
     return Commands.argument("type", registry()).suggests(REGISTRY);
   }
 
@@ -68,9 +68,9 @@ public class RegistryArgument {
    * TODO 1.21: rename to {@code get}
    */
   public static Registry<?> getResult(CommandContext<? extends SharedSuggestionProvider> context, String name) throws CommandSyntaxException {
-    ResourceLocation id = context.getArgument(name, ResourceLocation.class);
+    Identifier id = context.getArgument(name, Identifier.class);
     return context.getSource().registryAccess()
-                   .registry(ResourceKey.createRegistryKey(id))
+                   .lookup(ResourceKey.createRegistryKey(id))
                    .orElseThrow(() -> NOT_FOUND.create(id));
   }
 

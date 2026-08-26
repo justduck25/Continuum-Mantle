@@ -2,19 +2,16 @@ package slimeknights.mantle.fluid.texture;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonSyntaxException;
-import com.mojang.blaze3d.shaders.FogShape;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.Accessors;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.util.GsonHelper;
-import net.minecraftforge.fluids.FluidType;
-import net.minecraftforge.registries.ForgeRegistries;
-import slimeknights.mantle.client.model.TextureColorHelper;
+import net.neoforged.neoforge.fluids.FluidType;
+import net.neoforged.neoforge.registries.NeoForgeRegistries;
 import slimeknights.mantle.data.loadable.common.ColorLoadable;
-import slimeknights.mantle.data.loadable.primitive.EnumLoadable;
 import slimeknights.mantle.util.JsonHelper;
 
 import javax.annotation.Nullable;
@@ -25,34 +22,30 @@ import java.util.Objects;
 @Data
 @AllArgsConstructor
 public final class FluidTexture {
-  private static final EnumLoadable<FogShape> FOG_SHAPE_LOADABLE = new EnumLoadable<>(FogShape.class);
-
-  private final ResourceLocation still;
-  private final ResourceLocation flowing;
+  private final Identifier still;
+  private final Identifier flowing;
   @Nullable
-  private final ResourceLocation overlay;
+  private final Identifier overlay;
   @Nullable
-  private final ResourceLocation camera;
+  private final Identifier camera;
   private final float cameraOpacity;
   private final int color;
   // fog
   private int fogColor;
   private final boolean calculateFogColor;
-  @Nullable
-  private final FogShape fogShape;
   private final float fogStart;
   private final float fogEnd;
 
-  /** @deprecated use {@link #FluidTexture(ResourceLocation, ResourceLocation, ResourceLocation, ResourceLocation, float, int, int, boolean, FogShape, float, float)} */
+  /** @deprecated use {@link #FluidTexture(Identifier, Identifier, Identifier, Identifier, float, int, int, boolean, FogShape, float, float)} */
   @Deprecated(forRemoval = true)
-  public FluidTexture(ResourceLocation still, ResourceLocation flowing, @Nullable ResourceLocation overlay, @Nullable ResourceLocation camera, int color) {
-    this(still, flowing, overlay, camera, 0.1f, color, -1, false, null, 0.25f, 1);
+  public FluidTexture(Identifier still, Identifier flowing, @Nullable Identifier overlay, @Nullable Identifier camera, int color) {
+    this(still, flowing, overlay, camera, 0.1f, color, -1, false, 0.25f, 1);
   }
 
   /** Gets the fog color for this fluid */
   public int fogColor() {
     if (calculateFogColor && fogColor == -1) {
-      fogColor = TextureColorHelper.getAverageColor(still);
+      fogColor = color == -1 ? 0xFFFFFFFF : (color | 0xFF000000);
     }
     return fogColor;
   }
@@ -80,11 +73,8 @@ public final class FluidTexture {
     } else if (calculateFogColor) {
       fog.addProperty("calculate_color", true);
     }
-    if (fogShape != null) {
-      fog.add("shape", FOG_SHAPE_LOADABLE.serialize(fogShape));
-      fog.addProperty("start", fogStart);
-      fog.addProperty("end", fogEnd);
-    }
+    fog.addProperty("start", fogStart);
+    fog.addProperty("end", fogEnd);
     if (!fog.keySet().isEmpty()) {
       json.add("fog", fog);
     }
@@ -94,13 +84,13 @@ public final class FluidTexture {
 
   /** Deserializes this from JSON */
   public static FluidTexture deserialize(JsonObject json) {
-    ResourceLocation still = JsonHelper.getResourceLocation(json, "still");
-    ResourceLocation flowing = JsonHelper.getResourceLocation(json, "flowing");
-    ResourceLocation overlay = JsonHelper.getResourceLocation(json, "overlay", null);
-    ResourceLocation camera = null;
+    Identifier still = JsonHelper.getIdentifier(json, "still");
+    Identifier flowing = JsonHelper.getIdentifier(json, "flowing");
+    Identifier overlay = JsonHelper.getIdentifier(json, "overlay", null);
+    Identifier camera = null;
     float cameraOpacity = 0;
     if (json.has("camera")) {
-      camera = JsonHelper.wrap(JsonHelper.getResourceLocation(json, "camera"), "textures/", ".png");
+      camera = JsonHelper.wrap(JsonHelper.getIdentifier(json, "camera"), "textures/", ".png");
       cameraOpacity = GsonHelper.getAsFloat(json, "camera_opacity");
       if (cameraOpacity <= 0 || cameraOpacity > 1) {
         throw new JsonSyntaxException("Camera opacity must be between 0 (exclusive) and 1 (inclusive)");
@@ -109,7 +99,6 @@ public final class FluidTexture {
     int color = ColorLoadable.ALPHA.getOrWhite(json, "color");
     int fogColor = color | 0xFF000000; // default fog color to opaque variant of fluid color. If no tint this will end up as -1
     boolean calculateFogColor = false;
-    FogShape fogShape = null;
     float fogStart = 0.25f;
     float fogEnd = 1;
     if (json.has("fog")) {
@@ -119,13 +108,10 @@ public final class FluidTexture {
       } else if (color == -1) {
         calculateFogColor = GsonHelper.getAsBoolean(fog, "calculate_color", false);
       }
-      fogShape = FOG_SHAPE_LOADABLE.getOrDefault(fog, "shape", null);
-      if (fogShape != null) {
-        fogStart = GsonHelper.getAsFloat(fog, "start", 0.25f);
-        fogEnd = GsonHelper.getAsFloat(fog, "end", 1);
-      }
+      fogStart = GsonHelper.getAsFloat(fog, "start", 0.25f);
+      fogEnd = GsonHelper.getAsFloat(fog, "end", 1);
     }
-    return new FluidTexture(still, flowing, overlay, camera, cameraOpacity, color, fogColor, calculateFogColor, fogShape, fogStart, fogEnd);
+    return new FluidTexture(still, flowing, overlay, camera, cameraOpacity, color, fogColor, calculateFogColor, fogStart, fogEnd);
   }
 
 
@@ -142,19 +128,17 @@ public final class FluidTexture {
     /**
      * Base path, make sure to include the trailing "_" or "/"
      */
-    private ResourceLocation root;
-    private ResourceLocation still;
-    private ResourceLocation flowing;
+    private Identifier root;
+    private Identifier still;
+    private Identifier flowing;
     @Nullable
-    private ResourceLocation overlay = null;
+    private Identifier overlay = null;
     @Nullable
-    private ResourceLocation camera = null;
+    private Identifier camera = null;
     private float cameraOpacity = 0.1f;
     private int color = -1;
     private int fogColor = -1;
     private boolean calculateFogColor = false;
-    @Nullable
-    private FogShape fogShape = null;
     private float fogStart = 0.25f;
     private float fogEnd = 1;
 
@@ -168,7 +152,7 @@ public final class FluidTexture {
      * @return Builder instance
      */
     public Builder wrapId(String prefix, String suffix, boolean overlay, boolean camera) {
-      return textures(JsonHelper.wrap(Objects.requireNonNull(ForgeRegistries.FLUID_TYPES.get().getKey(fluid)), prefix, suffix), overlay, camera);
+      return textures(JsonHelper.wrap(Objects.requireNonNull(NeoForgeRegistries.FLUID_TYPES.getKey(fluid)), prefix, suffix), overlay, camera);
     }
 
     /**
@@ -218,10 +202,10 @@ public final class FluidTexture {
      * @param overlay If true, include an overlay texture
      * @param camera  If true, include a camera texture
      * @return Builder instance
-     * @deprecated use {@link #root(ResourceLocation)}, {@link #still()}, {@link #flowing()}, {@link #camera()}, and {@link #overlay()}
+     * @deprecated use {@link #root(Identifier)}, {@link #still()}, {@link #flowing()}, {@link #camera()}, and {@link #overlay()}
      */
     @Deprecated
-    public Builder textures(ResourceLocation path, boolean overlay, boolean camera) {
+    public Builder textures(Identifier path, boolean overlay, boolean camera) {
       root(path).still().flowing();
       if (overlay) {
         overlay();
@@ -232,9 +216,9 @@ public final class FluidTexture {
       return this;
     }
 
-    /** Sets all 3 fog properties */
-    public Builder fog(FogShape shape, float start, float end) {
-      return fogShape(shape).fogStart(start).fogEnd(end);
+    /** Sets fog distance properties. */
+    public Builder fog(float start, float end) {
+      return fogStart(start).fogEnd(end);
     }
 
     /**
@@ -244,7 +228,7 @@ public final class FluidTexture {
       if (still == null || flowing == null) {
         throw new IllegalStateException("Must set both still and flowing");
       }
-      return new FluidTexture(still, flowing, overlay, camera, cameraOpacity, color, fogColor, fogColor == -1 && calculateFogColor, fogShape, fogStart, fogEnd);
+      return new FluidTexture(still, flowing, overlay, camera, cameraOpacity, color, fogColor, fogColor == -1 && calculateFogColor, fogStart, fogEnd);
     }
 
     /* Getters for other datagen */
@@ -252,14 +236,14 @@ public final class FluidTexture {
     /**
      * Gets the still texture for the builder
      */
-    public ResourceLocation getStill() {
+    public Identifier getStill() {
       return Objects.requireNonNull(still, "Still must be set");
     }
 
     /**
      * Gets the flowing texture for the builder
      */
-    public ResourceLocation getFlowing() {
+    public Identifier getFlowing() {
       return Objects.requireNonNull(flowing, "Flowing must be set");
     }
 
@@ -267,7 +251,7 @@ public final class FluidTexture {
      * Gets the camera texture for the builder
      */
     @Nullable
-    public ResourceLocation getCamera() {
+    public Identifier getCamera() {
       return camera;
     }
 
@@ -275,7 +259,7 @@ public final class FluidTexture {
      * Gets the overlay texture for the builder
      */
     @Nullable
-    public ResourceLocation getOverlay() {
+    public Identifier getOverlay() {
       return overlay;
     }
   }

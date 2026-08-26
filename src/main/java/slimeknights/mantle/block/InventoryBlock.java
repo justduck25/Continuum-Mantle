@@ -2,6 +2,7 @@ package slimeknights.mantle.block;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.Containers;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
@@ -16,9 +17,7 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
-import net.minecraftforge.common.capabilities.ForgeCapabilities;
-import net.minecraftforge.items.IItemHandler;
-import net.minecraftforge.network.NetworkHooks;
+import net.neoforged.neoforge.items.IItemHandler;
 import slimeknights.mantle.block.entity.INameableMenuProvider;
 import slimeknights.mantle.inventory.BaseContainerMenu;
 
@@ -45,7 +44,7 @@ public abstract class InventoryBlock extends Block implements EntityBlock {
     if (!world.isClientSide()) {
       MenuProvider container = this.getMenuProvider(world.getBlockState(pos), world, pos);
       if (container != null && player instanceof ServerPlayer serverPlayer) {
-        NetworkHooks.openScreen(serverPlayer, container, pos);
+        serverPlayer.openMenu(container, pos);
         if (player.containerMenu instanceof BaseContainerMenu<?> menu) {
           menu.syncOnOpen(serverPlayer);
         }
@@ -58,11 +57,11 @@ public abstract class InventoryBlock extends Block implements EntityBlock {
   @SuppressWarnings("deprecation")
   @Deprecated
   @Override
-  public InteractionResult use(BlockState state, Level world, BlockPos pos, Player player, InteractionHand hand, BlockHitResult rayTraceResult) {
+  protected InteractionResult useWithoutItem(BlockState state, Level world, BlockPos pos, Player player, BlockHitResult rayTraceResult) {
     if (player.isSuppressingBounce()) {
       return InteractionResult.PASS;
     }
-    if (!world.isClientSide) {
+    if (!world.isClientSide()) {
       return this.openGui(player, world, pos) ? InteractionResult.SUCCESS : InteractionResult.PASS;
     }
     return InteractionResult.SUCCESS;
@@ -76,7 +75,7 @@ public abstract class InventoryBlock extends Block implements EntityBlock {
     super.setPlacedBy(worldIn, pos, state, placer, stack);
 
     // set custom name from named stack
-    if (stack.hasCustomHoverName()) {
+    if (stack.getCustomName() != null) {
       BlockEntity tileentity = worldIn.getBlockEntity(pos);
       if (tileentity instanceof INameableMenuProvider provider) {
         provider.setCustomName(stack.getHoverName());
@@ -96,19 +95,16 @@ public abstract class InventoryBlock extends Block implements EntityBlock {
 
   /* Inventory handling */
 
-  @SuppressWarnings("deprecation")
-  @Deprecated
   @Override
-  public void onRemove(BlockState state, Level worldIn, BlockPos pos, BlockState newState, boolean isMoving) {
-    if (state.getBlock() != newState.getBlock()) {
-      BlockEntity te = worldIn.getBlockEntity(pos);
-      if (te != null) {
-        te.getCapability(ForgeCapabilities.ITEM_HANDLER).ifPresent(inventory -> dropInventoryItems(state, worldIn, pos, inventory));
-        worldIn.updateNeighbourForOutputSignal(pos, this);
-      }
+  protected void affectNeighborsAfterRemoval(BlockState state, ServerLevel worldIn, BlockPos pos, boolean isMoving) {
+    BlockEntity te = worldIn.getBlockEntity(pos);
+    if (te instanceof slimeknights.mantle.block.entity.InventoryBlockEntity inv) {
+      dropInventoryItems(state, worldIn, pos, inv.getItemHandler());
+      worldIn.updateNeighbourForOutputSignal(pos, this);
+    } else if (te != null) {
+      worldIn.updateNeighbourForOutputSignal(pos, this);
     }
-
-    super.onRemove(state, worldIn, pos, newState, isMoving);
+    super.affectNeighborsAfterRemoval(state, worldIn, pos, isMoving);
   }
 
   /**

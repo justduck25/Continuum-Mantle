@@ -8,11 +8,11 @@ import com.mojang.brigadier.suggestion.SuggestionProvider;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.SharedSuggestionProvider;
-import net.minecraft.commands.arguments.ResourceLocationArgument;
+import net.minecraft.commands.arguments.IdentifierArgument;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.FileToIdConverter;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.resources.Resource;
 import net.minecraft.server.packs.resources.ResourceManager;
 import slimeknights.mantle.Mantle;
@@ -29,29 +29,29 @@ public class SourcesCommand {
 
   /** Registers this command with the builder */
   public static void register(LiteralArgumentBuilder<CommandSourceStack> subCommand) {
-    subCommand = subCommand.requires(source -> source.hasPermission(MantleCommand.PERMISSION_EDIT_SPAWN));
+    subCommand = subCommand.requires(source -> MantleCommand.hasPermission(source, MantleCommand.PERMISSION_EDIT_SPAWN));
     subCommand.then(Commands.literal("path")
-      .then(Commands.argument("path", ResourceLocationArgument.id())
-        .executes(context -> run(context, context.getSource().getServer().getResourceManager(), ResourceLocationArgument.getId(context, "path")))));
+      .then(Commands.argument("path", IdentifierArgument.id())
+        .executes(context -> run(context, context.getSource().getServer().getResourceManager(), IdentifierArgument.getId(context, "path")))));
     for (SourceFolder source : FOLDERS) {
       subCommand.then(Commands.literal(source.argument)
-        .then(Commands.argument("id", ResourceLocationArgument.id()).suggests(source.suggestionProvider)
-          .executes(context -> run(context, source.folder, ResourceLocationArgument.getId(context, "id"), source.extension))));
+        .then(Commands.argument("id", IdentifierArgument.id()).suggests(source.suggestionProvider)
+          .executes(context -> run(context, source.folder, IdentifierArgument.getId(context, "id"), source.extension))));
     }
   }
 
   /** Runs for the given folder and extension */
-  private static int run(CommandContext<CommandSourceStack> context, String folder, ResourceLocation id, String extension) throws CommandSyntaxException {
+  private static int run(CommandContext<CommandSourceStack> context, String folder, Identifier id, String extension) throws CommandSyntaxException {
     return run(context, context.getSource().getServer().getResourceManager(), id.withPath(folder + '/' + id.getPath() + extension));
   }
 
   /** Runs for the given folder and extension */
-  public static int run(CommandContext<CommandSourceStack> context, ResourceManager manager, String folder, ResourceLocation id, String extension) throws CommandSyntaxException {
+  public static int run(CommandContext<CommandSourceStack> context, ResourceManager manager, String folder, Identifier id, String extension) throws CommandSyntaxException {
     return run(context, manager, id.withPath(folder + '/' + id.getPath() + extension));
   }
 
   /** Runs for the given ID and resource manager */
-  public static int run(CommandContext<CommandSourceStack> context, ResourceManager manager, ResourceLocation path) throws CommandSyntaxException {
+  public static int run(CommandContext<CommandSourceStack> context, ResourceManager manager, Identifier path) throws CommandSyntaxException {
     List<String> packs = manager.getResourceStack(path).stream().map(Resource::sourcePackId).toList();
     if (packs.isEmpty()) {
       throw NOT_FOUND.create(path);

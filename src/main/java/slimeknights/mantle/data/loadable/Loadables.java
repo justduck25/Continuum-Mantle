@@ -6,7 +6,7 @@ import net.minecraft.core.particles.ParticleType;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.damagesource.DamageType;
@@ -24,18 +24,18 @@ import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.material.Fluids;
 import net.minecraft.world.level.storage.loot.entries.LootPoolEntryContainer;
-import net.minecraftforge.common.ToolAction;
-import net.minecraftforge.common.loot.LootModifierManager;
-import net.minecraftforge.fluids.FluidType;
-import net.minecraftforge.registries.ForgeRegistries;
-import slimeknights.mantle.client.model.util.ModelHelper;
-import slimeknights.mantle.data.loadable.common.GsonLoadable;
+
+import net.neoforged.neoforge.common.loot.LootModifierManager;
+import net.neoforged.neoforge.fluids.FluidType;
+import net.neoforged.neoforge.registries.NeoForgeRegistries;
+import slimeknights.mantle.data.MantleCodecs;
+import slimeknights.mantle.data.loadable.common.CodecLoadable;
 import slimeknights.mantle.data.loadable.common.LazyRegistryLoadable;
 import slimeknights.mantle.data.loadable.common.RegistryLoadable;
 import slimeknights.mantle.data.loadable.primitive.EnumLoadable;
 import slimeknights.mantle.data.loadable.primitive.IntLoadable;
 import slimeknights.mantle.data.loadable.primitive.IntLoadable.IntNetwork;
-import slimeknights.mantle.data.loadable.primitive.ResourceLocationLoadable;
+import slimeknights.mantle.data.loadable.primitive.IdentifierLoadable;
 import slimeknights.mantle.data.loadable.primitive.StringLoadable;
 
 import java.util.function.BiFunction;
@@ -46,23 +46,23 @@ public class Loadables {
   private Loadables() {}
 
   /** Alias for the resource location loadable as it's a common need */
-  public static final StringLoadable<ResourceLocation> RESOURCE_LOCATION = ResourceLocationLoadable.DEFAULT;
-  public static final StringLoadable<ToolAction> TOOL_ACTION = StringLoadable.DEFAULT.flatXmap(ToolAction::get, ToolAction::name);
+  public static final StringLoadable<Identifier> RESOURCE_LOCATION = IdentifierLoadable.DEFAULT;
+  public static final StringLoadable<String> TOOL_ACTION = StringLoadable.DEFAULT;
 
   /* Registries */
-  public static final ResourceLocationLoadable<SoundEvent> SOUND_EVENT = new RegistryLoadable<>(BuiltInRegistries.SOUND_EVENT);
-  public static final ResourceLocationLoadable<Fluid> FLUID = new RegistryLoadable<>(BuiltInRegistries.FLUID);
-  public static final ResourceLocationLoadable<FluidType> FLUID_TYPE = new LazyRegistryLoadable<>(ForgeRegistries.Keys.FLUID_TYPES);
-  public static final ResourceLocationLoadable<MobEffect> MOB_EFFECT = new RegistryLoadable<>(BuiltInRegistries.MOB_EFFECT);
-  public static final ResourceLocationLoadable<Block> BLOCK = new RegistryLoadable<>(BuiltInRegistries.BLOCK);
-  public static final ResourceLocationLoadable<Enchantment> ENCHANTMENT = new RegistryLoadable<>(BuiltInRegistries.ENCHANTMENT);
-  public static final ResourceLocationLoadable<EntityType<?>> ENTITY_TYPE = new RegistryLoadable<>(BuiltInRegistries.ENTITY_TYPE);
-  public static final ResourceLocationLoadable<Item> ITEM = new RegistryLoadable<>(BuiltInRegistries.ITEM);
-  public static final ResourceLocationLoadable<Potion> POTION = new RegistryLoadable<>(BuiltInRegistries.POTION);
-  public static final ResourceLocationLoadable<ParticleType<?>> PARTICLE_TYPE = new RegistryLoadable<>(BuiltInRegistries.PARTICLE_TYPE);
-  public static final ResourceLocationLoadable<BlockEntityType<?>> BLOCK_ENTITY_TYPE = new RegistryLoadable<>(BuiltInRegistries.BLOCK_ENTITY_TYPE);
-  public static final ResourceLocationLoadable<Attribute> ATTRIBUTE = new RegistryLoadable<>(BuiltInRegistries.ATTRIBUTE);
-  public static final ResourceLocationLoadable<RecipeType<?>> RECIPE_TYPE = new RegistryLoadable<>(BuiltInRegistries.RECIPE_TYPE);
+  public static final IdentifierLoadable<SoundEvent> SOUND_EVENT = new RegistryLoadable<>(BuiltInRegistries.SOUND_EVENT);
+  public static final IdentifierLoadable<Fluid> FLUID = new RegistryLoadable<>(BuiltInRegistries.FLUID);
+  public static final IdentifierLoadable<FluidType> FLUID_TYPE = new LazyRegistryLoadable<>(NeoForgeRegistries.Keys.FLUID_TYPES);
+  public static final IdentifierLoadable<MobEffect> MOB_EFFECT = new RegistryLoadable<>(BuiltInRegistries.MOB_EFFECT);
+  public static final IdentifierLoadable<Block> BLOCK = new RegistryLoadable<>(BuiltInRegistries.BLOCK);
+  public static final IdentifierLoadable<Enchantment> ENCHANTMENT = new LazyRegistryLoadable<>(Registries.ENCHANTMENT);
+  public static final IdentifierLoadable<EntityType<?>> ENTITY_TYPE = new RegistryLoadable<>(BuiltInRegistries.ENTITY_TYPE);
+  public static final IdentifierLoadable<Item> ITEM = new RegistryLoadable<>(BuiltInRegistries.ITEM);
+  public static final IdentifierLoadable<Potion> POTION = new RegistryLoadable<>(BuiltInRegistries.POTION);
+  public static final IdentifierLoadable<ParticleType<?>> PARTICLE_TYPE = new RegistryLoadable<>(BuiltInRegistries.PARTICLE_TYPE);
+  public static final IdentifierLoadable<BlockEntityType<?>> BLOCK_ENTITY_TYPE = new RegistryLoadable<>(BuiltInRegistries.BLOCK_ENTITY_TYPE);
+  public static final IdentifierLoadable<Attribute> ATTRIBUTE = new RegistryLoadable<>(BuiltInRegistries.ATTRIBUTE);
+  public static final IdentifierLoadable<RecipeType<?>> RECIPE_TYPE = new RegistryLoadable<>(BuiltInRegistries.RECIPE_TYPE);
 
   /* Non-default registries */
   public static final StringLoadable<Fluid> NON_EMPTY_FLUID = notValue(FLUID, Fluids.EMPTY, "Fluid cannot be empty");
@@ -85,11 +85,11 @@ public class Loadables {
 
   /* Loot tables */
   /** Loadable for a loot entry instance */
-  public static final Loadable<LootPoolEntryContainer> LOOT_ENTRY = new GsonLoadable<>(LootModifierManager.GSON_INSTANCE, LootPoolEntryContainer.class);
+  public static final Loadable<LootPoolEntryContainer> LOOT_ENTRY = new CodecLoadable<>(MantleCodecs.LOOT_ENTRY);
 
   /** Loadable for a rotation value, from 0 to 270 */
   public static final Loadable<Integer> ROTATION = new IntLoadable(0, 270, IntNetwork.SHORT).validate((value, error) -> {
-    if (!ModelHelper.checkRotation(value)) {
+    if (!(value >= 0 && value % 90 == 0 && value <= 270)) {
       throw error.create("Rotation must be 0/90/180/270");
     }
     return value;
@@ -108,7 +108,7 @@ public class Loadables {
 
   /** Creates a resource key loadable */
   public static <T> StringLoadable<ResourceKey<T>> resourceKey(ResourceKey<? extends Registry<T>> registry) {
-    return RESOURCE_LOCATION.flatXmap(key -> ResourceKey.create(registry, key), ResourceKey::location);
+    return RESOURCE_LOCATION.flatXmap(key -> ResourceKey.create(registry, key), ResourceKey::identifier);
   }
 
   /** Maps a loadable to a variant that disallows a particular value */

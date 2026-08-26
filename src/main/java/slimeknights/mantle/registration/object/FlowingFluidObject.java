@@ -1,14 +1,14 @@
 package slimeknights.mantle.registration.object;
 
 import lombok.Getter;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraft.tags.FluidTags;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.Identifier;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.level.block.LiquidBlock;
 import net.minecraft.world.level.material.FlowingFluid;
 import net.minecraft.world.level.material.Fluid;
-import net.minecraftforge.fluids.FluidType;
-import slimeknights.mantle.recipe.ingredient.FluidIngredient;
+import net.neoforged.neoforge.fluids.FluidType;
+
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -29,9 +29,9 @@ public class FlowingFluidObject<F extends FlowingFluid> extends FluidObject<F> {
   private final Supplier<? extends LiquidBlock> block;
 
   /** Main constructor */
-  public FlowingFluidObject(ResourceLocation id, @Nullable String tagName, Supplier<? extends FluidType> type, Supplier<? extends F> still, Supplier<? extends F> flowing, @Nullable Supplier<? extends LiquidBlock> block) {
+  public FlowingFluidObject(Identifier id, @Nullable String tagName, Supplier<? extends FluidType> type, Supplier<? extends F> still, Supplier<? extends F> flowing, @Nullable Supplier<? extends LiquidBlock> block) {
     super(id, tagName, type, still);
-    this.localTag = FluidTags.create(id);
+    this.localTag = TagKey.create(Registries.FLUID, id);
     this.flowing = flowing;
     this.block = block;
   }
@@ -73,8 +73,4 @@ public class FlowingFluidObject<F extends FlowingFluid> extends FluidObject<F> {
     return commonTag != null ? commonTag : localTag;
   }
 
-  @Override
-  public FluidIngredient ingredient(int amount) {
-    return FluidIngredient.of(getTag(), amount);
-  }
 }

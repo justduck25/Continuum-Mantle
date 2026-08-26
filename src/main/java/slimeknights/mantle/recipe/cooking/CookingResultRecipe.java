@@ -10,7 +10,7 @@ import slimeknights.mantle.recipe.helper.ItemOutput;
 /** Simplifies the serializers for result recipes */
 public interface CookingResultRecipe {
   LoadableField<CookingBookCategory, AbstractCookingRecipe> CATEGORY_FIELD = new EnumLoadable<>(CookingBookCategory.class).defaultField("category", CookingBookCategory.MISC, true, AbstractCookingRecipe::category);
-  LoadableField<Float, AbstractCookingRecipe> EXPERIENCE_FIELD = FloatLoadable.FROM_ZERO.defaultField("experience",0f, AbstractCookingRecipe::getExperience);
+  LoadableField<Float, AbstractCookingRecipe> EXPERIENCE_FIELD = FloatLoadable.FROM_ZERO.defaultField("experience",0f, AbstractCookingRecipe::experience);
   LoadableField<ItemOutput,CookingResultRecipe> RESULT_FIELD = ItemOutput.Loadable.REQUIRED_STACK.requiredField("result", CookingResultRecipe::getResult);
 
   /** Gets the recipe result */

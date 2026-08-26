@@ -14,7 +14,6 @@ public class BurnableHangingSignItem extends HangingSignItem {
     this.burnTime = burnTime;
   }
 
-  @Override
   public int getBurnTime(ItemStack itemStack, @Nullable RecipeType<?> recipeType) {
     return burnTime;
   }

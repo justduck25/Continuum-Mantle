@@ -9,14 +9,13 @@ import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.ClickEvent;
-import net.minecraft.network.chat.ClickEvent.Action;
+
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.tags.TagKey;
-import net.minecraft.world.item.Tier;
+import net.minecraft.world.item.ToolMaterial;
 import net.minecraft.world.level.block.Block;
-import net.minecraftforge.common.TierSortingRegistry;
 import slimeknights.mantle.Mantle;
 
 import java.io.BufferedWriter;
@@ -25,76 +24,59 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
-import java.util.Objects;
 
-/** Command to dump global loot modifiers */
+/** Command to dump vanilla tool material mining tags. */
 public class HarvestTiersCommand {
-  /** Resource location of the global loot manager "tag" */
-  protected static final ResourceLocation HARVEST_TIERS = new ResourceLocation("forge", "item_tier_ordering.json");
-  /** Path for saving the loot modifiers */
+  protected static final Identifier HARVEST_TIERS = Identifier.fromNamespaceAndPath("minecraft", "item_tier_ordering.json");
   private static final String HARVEST_TIER_PATH = HARVEST_TIERS.getNamespace() + "/" + HARVEST_TIERS.getPath();
 
-  // loot modifiers
   private static final Component SUCCESS_LOG = Component.translatable("command.mantle.harvest_tiers.success_log");
   private static final Component EMPTY = Component.translatable("command.mantle.tag.empty");
 
-  /**
-   * Registers this sub command with the root command
-   * @param subCommand  Command builder
-   */
+  private static final List<Entry> MATERIALS = List.of(
+    new Entry("wood", ToolMaterial.WOOD),
+    new Entry("stone", ToolMaterial.STONE),
+    new Entry("copper", ToolMaterial.COPPER),
+    new Entry("iron", ToolMaterial.IRON),
+    new Entry("diamond", ToolMaterial.DIAMOND),
+    new Entry("gold", ToolMaterial.GOLD),
+    new Entry("netherite", ToolMaterial.NETHERITE)
+  );
+
   public static void register(LiteralArgumentBuilder<CommandSourceStack> subCommand) {
-    subCommand.requires(sender -> sender.hasPermission(MantleCommand.PERMISSION_EDIT_SPAWN))
+    subCommand.requires(sender -> MantleCommand.hasPermission(sender, MantleCommand.PERMISSION_EDIT_SPAWN))
               .then(Commands.literal("save").executes(source -> run(source, true)))
               .then(Commands.literal("log").executes(source -> run(source, false)))
               .then(Commands.literal("list").executes(HarvestTiersCommand::list));
   }
 
-  /** Creates a clickable component for a block tag */
   private static Object getTagComponent(TagKey<Block> tag) {
-    ResourceLocation id = tag.location();
-    return Component.literal(id.toString()).withStyle(style -> style.withUnderlined(true).withClickEvent(new ClickEvent(Action.SUGGEST_COMMAND, "/mantle dump_tag " + Registries.BLOCK.location() + " " + id + " save")));
+    Identifier id = tag.location();
+    return Component.literal(id.toString()).withStyle(style -> style.withUnderlined(true).withClickEvent(new ClickEvent.SuggestCommand("/mantle dump_tag " + Registries.BLOCK.identifier() + " " + id + " save")));
   }
 
-  /** Runs the command, dumping the tag */
   private static int list(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
-    List<Tier> sortedTiers = TierSortingRegistry.getSortedTiers();
-
-    // start building output message
     MutableComponent output = Component.translatable("command.mantle.harvest_tiers.success_list");
-    // if no values, print empty
-    if (sortedTiers.isEmpty()) {
+    if (MATERIALS.isEmpty()) {
       output.append("\n* ").append(EMPTY);
     } else {
-      for (Tier tier : sortedTiers) {
-        output.append("\n* ");
-        TagKey<Block> tag = tier.getTag();
-        ResourceLocation id = TierSortingRegistry.getName(tier);
-        if (tag != null) {
-          output.append(Component.translatable("command.mantle.harvest_tiers.tag", id, getTagComponent(tag)));
-        } else {
-          output.append(Component.translatable("command.mantle.harvest_tiers.no_tag", id));
-        }
+      for (Entry entry : MATERIALS) {
+        output.append("\n* ").append(Component.translatable("command.mantle.harvest_tiers.tag", entry.name, getTagComponent(entry.material.incorrectBlocksForDrops())));
       }
     }
     context.getSource().sendSuccess(() -> output, true);
-    return sortedTiers.size();
+    return MATERIALS.size();
   }
 
-  /** Runs the command, dumping the tag */
   private static int run(CommandContext<CommandSourceStack> context, boolean saveFile) throws CommandSyntaxException {
-    List<Tier> sortedTiers = TierSortingRegistry.getSortedTiers();
-
-    // save the list as JSON
     JsonArray entries = new JsonArray();
-    for (Tier location : sortedTiers) {
-      entries.add(Objects.requireNonNull(TierSortingRegistry.getName(location)).toString());
+    for (Entry entry : MATERIALS) {
+      entries.add(entry.name);
     }
     JsonObject json = new JsonObject();
     json.add("order", entries);
 
-    // if requested, save
     if (saveFile) {
-      // save file
       File output = new File(DumpAllTagsCommand.getOutputFile(context), HARVEST_TIER_PATH);
       Path path = output.toPath();
       try {
@@ -107,11 +89,11 @@ public class HarvestTiersCommand {
       }
       context.getSource().sendSuccess(() -> Component.translatable("command.mantle.harvest_tiers.success_save", GeneratePackHelper.getOutputComponent(output)), true);
     } else {
-      // print to console
       context.getSource().sendSuccess(() -> SUCCESS_LOG, true);
       Mantle.logger.info("Dump of harvests tiers:\n{}", DumpTagCommand.GSON.toJson(json));
     }
-    // return a number to finish
-    return sortedTiers.size();
+    return MATERIALS.size();
   }
+
+  private record Entry(String name, ToolMaterial material) {}
 }

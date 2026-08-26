@@ -6,7 +6,7 @@ import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.packs.resources.Resource;
 import net.minecraft.server.packs.resources.ResourceManager;
@@ -34,14 +34,14 @@ public class DumpAllTagsCommand {
    * @param subCommand  Command builder
    */
   public static void register(LiteralArgumentBuilder<CommandSourceStack> subCommand) {
-    subCommand.requires(sender -> sender.hasPermission(MantleCommand.PERMISSION_EDIT_SPAWN))
+    subCommand.requires(sender -> MantleCommand.hasPermission(sender, MantleCommand.PERMISSION_EDIT_SPAWN))
               .executes(DumpAllTagsCommand::runAll)
               .then(TagSourceArgument.argument().executes(DumpAllTagsCommand::runType));
   }
 
   /** Gets the path for the output */
   protected static File getOutputFile(CommandContext<CommandSourceStack> context) {
-    return context.getSource().getServer().getFile(TAG_DUMP_PATH);
+    return context.getSource().getServer().getFile(TAG_DUMP_PATH).toFile();
   }
 
   /** @deprecated use {@link GeneratePackHelper#getOutputComponent(File)} */
@@ -65,7 +65,7 @@ public class DumpAllTagsCommand {
     TagSource<?> registry = TagSourceArgument.get(context);
     int result = runForFolder(context, registry, output);
     // print result
-    context.getSource().sendSuccess(() -> Component.translatable("command.mantle.dump_all_tags.type_success", registry.key().location(), GeneratePackHelper.getOutputComponent(output)), true);
+    context.getSource().sendSuccess(() -> Component.translatable("command.mantle.dump_all_tags.type_success", registry.key().identifier(), GeneratePackHelper.getOutputComponent(output)), true);
     return result;
   }
 
@@ -75,22 +75,22 @@ public class DumpAllTagsCommand {
    * @return  Integer return
    */
   private static int runForFolder(CommandContext<CommandSourceStack> context, TagSource<?> registry, File output) {
-    Map<ResourceLocation,List<TagLoader.EntryWithSource>> foundTags = Maps.newHashMap();
+    Map<Identifier,List<TagLoader.EntryWithSource>> foundTags = Maps.newHashMap();
     MinecraftServer server = context.getSource().getServer();
     ResourceManager manager = server.getResourceManager();
-    ResourceLocation tagType = registry.key().location();
+    Identifier tagType = registry.key().identifier();
 
     // iterate all tags from the datapack
     String dataPackFolder = registry.folder();
-    for (Map.Entry<ResourceLocation,List<Resource>> entry : manager.listResourceStacks(dataPackFolder, fileName -> fileName.getPath().endsWith(".json")).entrySet()) {
-      ResourceLocation resourcePath = entry.getKey();
-      ResourceLocation tagId = JsonHelper.localize(resourcePath, dataPackFolder, ".json");
+    for (Map.Entry<Identifier,List<Resource>> entry : manager.listResourceStacks(dataPackFolder, fileName -> fileName.getPath().endsWith(".json")).entrySet()) {
+      Identifier resourcePath = entry.getKey();
+      Identifier tagId = JsonHelper.localize(resourcePath, dataPackFolder, ".json");
       DumpTagCommand.parseTag(entry.getValue(), foundTags.computeIfAbsent(resourcePath, id -> new ArrayList<>()), tagType, tagId, resourcePath);
     }
 
     // save all tags
-    for (Entry<ResourceLocation, List<TagLoader.EntryWithSource>> entry : foundTags.entrySet()) {
-      ResourceLocation location = entry.getKey();
+    for (Entry<Identifier, List<TagLoader.EntryWithSource>> entry : foundTags.entrySet()) {
+      Identifier location = entry.getKey();
       Path path = output.toPath().resolve(location.getNamespace() + "/" + location.getPath());
       DumpTagCommand.saveTag(entry.getValue(), path);
     }

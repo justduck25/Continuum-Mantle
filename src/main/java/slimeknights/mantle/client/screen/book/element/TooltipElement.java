@@ -1,7 +1,7 @@
 package slimeknights.mantle.client.screen.book.element;
 
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
 
 import java.util.List;
@@ -18,13 +18,13 @@ public class TooltipElement extends SizedBookElement {
   }
 
   @Override
-  public void draw(GuiGraphics graphics, int mouseX, int mouseY, float partialTicks, Font fontRenderer) {
+  public void draw(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTicks, Font fontRenderer) {
   }
 
   @Override
-  public void drawOverlay(GuiGraphics graphics, int mouseX, int mouseY, float partialTicks, Font fontRenderer) {
+  public void drawOverlay(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTicks, Font fontRenderer) {
     if (this.isHovered(mouseX, mouseY)) {
-      graphics.renderTooltip(fontRenderer, this.tooltips, Optional.empty(), mouseX, mouseY);
+      graphics.setComponentTooltipForNextFrame(fontRenderer, this.tooltips, mouseX, mouseY);
     }
   }
 }

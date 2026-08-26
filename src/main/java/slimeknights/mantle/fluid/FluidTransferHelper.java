@@ -16,22 +16,28 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.BucketItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.ItemUtils;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.material.Fluids;
 import net.minecraft.world.phys.BlockHitResult;
-import net.minecraftforge.common.SoundAction;
-import net.minecraftforge.common.SoundActions;
-import net.minecraftforge.common.capabilities.ForgeCapabilities;
-import net.minecraftforge.common.util.LazyOptional;
-import net.minecraftforge.fluids.FluidStack;
-import net.minecraftforge.fluids.FluidType;
-import net.minecraftforge.fluids.capability.IFluidHandler;
-import net.minecraftforge.fluids.capability.IFluidHandler.FluidAction;
-import net.minecraftforge.fluids.capability.IFluidHandlerItem;
-import net.minecraftforge.fluids.capability.templates.EmptyFluidHandler;
-import net.minecraftforge.items.ItemHandlerHelper;
+import net.neoforged.neoforge.common.SoundAction;
+import net.neoforged.neoforge.common.SoundActions;
+import net.neoforged.neoforge.capabilities.Capabilities;
+import net.neoforged.neoforge.fluids.FluidStack;
+import net.neoforged.neoforge.fluids.FluidType;
+import net.neoforged.neoforge.fluids.capability.IFluidHandler;
+import net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction;
+import net.neoforged.neoforge.fluids.capability.IFluidHandlerItem;
+import net.neoforged.neoforge.fluids.capability.FluidResourceHandlerItemAdapter;
+import net.neoforged.neoforge.items.ItemHandlerHelper;
+import net.neoforged.neoforge.transfer.ResourceHandler;
+import net.neoforged.neoforge.transfer.ResourceHandlerUtil;
+import net.neoforged.neoforge.transfer.access.ItemAccess;
+import net.neoforged.neoforge.transfer.fluid.FluidResource;
+import net.neoforged.neoforge.transfer.fluid.FluidUtil;
+import net.neoforged.neoforge.transfer.transaction.Transaction;
 import slimeknights.mantle.Mantle;
 import slimeknights.mantle.fluid.transfer.FluidContainerTransferManager;
 import slimeknights.mantle.fluid.transfer.IFluidContainerTransfer;
@@ -43,7 +49,7 @@ import javax.annotation.Nullable;
 import static slimeknights.mantle.util.TranslationHelper.COMMA_FORMAT;
 
 /**
- * Alternative to {@link net.minecraftforge.fluids.FluidUtil} since no one has time to make the forge util not a buggy mess
+ * Alternative to {@link net.neoforged.neoforge.fluids.FluidUtil} since no one has time to make the forge util not a buggy mess
  */
 @SuppressWarnings("unused")
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
@@ -94,7 +100,7 @@ public class FluidTransferHelper {
       int simulatedFill = output.fill(fluid.copy(), FluidAction.SIMULATE);
       if (simulatedFill > 0) {
         // actually drain, use the fluid we successfully filled with just in case that changes
-        FluidStack drainedFluid = input.drain(new FluidStack(fluid, simulatedFill), FluidAction.EXECUTE);
+        FluidStack drainedFluid = input.drain(fluid.copyWithAmount(simulatedFill), FluidAction.EXECUTE);
         if (!drainedFluid.isEmpty()) {
           // actually fill
           int actualFill = output.fill(drainedFluid.copy(), FluidAction.EXECUTE);
@@ -102,7 +108,7 @@ public class FluidTransferHelper {
           if (actualFill < drainedFluid.getAmount()) {
             int toReturn = drainedFluid.getAmount() - actualFill;
             drainedFluid.setAmount(actualFill);
-            int returned = input.fill(new FluidStack(drainedFluid, toReturn), FluidAction.EXECUTE);
+            int returned = input.fill(drainedFluid.copyWithAmount(toReturn), FluidAction.EXECUTE);
             // failed to put the rest back, so all that's left to do is delete it
             if (returned < toReturn) {
               Mantle.logger.error("Lost {} fluid during transfer", toReturn - returned);
@@ -115,6 +121,88 @@ public class FluidTransferHelper {
     return FluidStack.EMPTY;
   }
 
+  /** Adapts NeoForge 26 transfer handlers to Mantle's legacy fluid helper API. */
+  private record ResourceFluidHandler(ResourceHandler<FluidResource> handler) implements IFluidHandler {
+    @Override
+    public int getTanks() {
+      return handler.size();
+    }
+
+    @Override
+    public FluidStack getFluidInTank(int tank) {
+      return FluidUtil.getStack(handler, tank);
+    }
+
+    @Override
+    public int getTankCapacity(int tank) {
+      return handler.getCapacityAsInt(tank, FluidResource.EMPTY);
+    }
+
+    @Override
+    public boolean isFluidValid(int tank, FluidStack stack) {
+      return !stack.isEmpty() && handler.isValid(tank, FluidResource.of(stack));
+    }
+
+    @Override
+    public int fill(FluidStack resource, FluidAction action) {
+      if (resource.isEmpty()) {
+        return 0;
+      }
+      try (Transaction tx = Transaction.open(Transaction.getCurrentOpenedTransaction())) {
+        int inserted = handler.insert(FluidResource.of(resource), resource.getAmount(), tx);
+        if (action.execute()) {
+          tx.commit();
+        }
+        return inserted;
+      }
+    }
+
+    @Override
+    public FluidStack drain(FluidStack resource, FluidAction action) {
+      if (resource.isEmpty()) {
+        return FluidStack.EMPTY;
+      }
+      try (Transaction tx = Transaction.open(Transaction.getCurrentOpenedTransaction())) {
+        int extracted = handler.extract(FluidResource.of(resource), resource.getAmount(), tx);
+        if (action.execute()) {
+          tx.commit();
+        }
+        return extracted == 0 ? FluidStack.EMPTY : resource.copyWithAmount(extracted);
+      }
+    }
+
+    @Override
+    public FluidStack drain(int maxDrain, FluidAction action) {
+      if (maxDrain <= 0) {
+        return FluidStack.EMPTY;
+      }
+      try (Transaction tx = Transaction.open(Transaction.getCurrentOpenedTransaction())) {
+        var extracted = ResourceHandlerUtil.extractFirst(handler, resource -> true, maxDrain, tx);
+        if (action.execute()) {
+          tx.commit();
+        }
+        return extracted == null ? FluidStack.EMPTY : extracted.resource().toStack(extracted.amount());
+      }
+    }
+  }
+
+  @Nullable
+  public static IFluidHandler getFluidHandler(Level world, BlockPos pos, @Nullable Direction side) {
+    ResourceHandler<FluidResource> handler = world.getCapability(Capabilities.Fluid.BLOCK, pos, side);
+    if (true) {
+    }
+    return handler == null ? null : new ResourceFluidHandler(handler);
+  }
+
+  @Nullable
+  private static IFluidHandlerItem getFluidItemHandler(ItemStack stack) {
+    if (stack.isEmpty()) {
+      return null;
+    }
+    ItemAccess access = ItemAccess.forStack(stack).oneByOne();
+    ResourceHandler<FluidResource> handler = access.getCapability(Capabilities.Fluid.ITEM);
+    return handler == null ? null : new FluidResourceHandlerItemAdapter(handler, access);
+  }
   /** Return options for interaction methods */
   public enum FluidInteractionResult {
     /** Indicates fluid filled the item stack, draining the block entity */
@@ -143,9 +231,9 @@ public class FluidTransferHelper {
     if (player.getItemInHand(hand).getItem() instanceof BucketItem) {
       BlockEntity te = world.getBlockEntity(pos);
       if (te != null) {
-        LazyOptional<IFluidHandler> teCapability = te.getCapability(ForgeCapabilities.FLUID_HANDLER, hit);
-        if (teCapability.isPresent()) {
-          return interactWithFilledBucket(world, pos, teCapability.orElse(EmptyFluidHandler.INSTANCE), player, hand, offset).hasContainer();
+        IFluidHandler teCapability = getFluidHandler(world, pos, hit);
+        if (teCapability != null) {
+          return interactWithFilledBucket(world, pos, teCapability, player, hand, offset).hasContainer();
         }
       }
     }
@@ -165,39 +253,69 @@ public class FluidTransferHelper {
   public static FluidInteractionResult interactWithFilledBucket(Level world, BlockPos pos, IFluidHandler handler, Player player, InteractionHand hand, Direction offset) {
     ItemStack held = player.getItemInHand(hand);
     if (held.getItem() instanceof BucketItem bucket) {
-      Fluid fluid = bucket.getFluid();
+      Fluid fluid = bucket.getContent();
       if (fluid != Fluids.EMPTY) {
-        if (!world.isClientSide) {
-          FluidStack fluidStack = new FluidStack(bucket.getFluid(), FluidType.BUCKET_VOLUME);
+        if (!world.isClientSide()) {
+          FluidStack fluidStack = new FluidStack(bucket.getContent(), FluidType.BUCKET_VOLUME);
           // must empty the whole bucket
           if (handler.fill(fluidStack, FluidAction.SIMULATE) == FluidType.BUCKET_VOLUME) {
             SoundEvent sound = getEmptySound(fluidStack);
             handler.fill(fluidStack, FluidAction.EXECUTE);
             bucket.checkExtraContent(player, world, held, pos.relative(offset));
             world.playSound(null, pos, sound, SoundSource.BLOCKS, 1.0F, 1.0F);
-            player.displayClientMessage(Component.translatable(KEY_FILLED, COMMA_FORMAT.format(FluidType.BUCKET_VOLUME), fluidStack.getDisplayName()), true);
+            sendStatusMessage(player, Component.translatable(KEY_FILLED, COMMA_FORMAT.format(FluidType.BUCKET_VOLUME), fluidStack.getHoverName()));
             if (!player.isCreative()) {
-              player.setItemInHand(hand, held.getCraftingRemainingItem());
+              player.setItemInHand(hand, new ItemStack(Items.BUCKET));
             }
             return FluidInteractionResult.DRAINED_STACK;
           }
         }
         return FluidInteractionResult.CONTAINER;
       }
+      // NeoForge 26 does not expose the vanilla empty bucket as an item fluid handler.
+      // Keep the manual bucket path bidirectional so empty buckets can drain tanks just
+      // like filled buckets can fill tanks, including custom bucket items from FluidType.
+      FluidStack drained = handler.drain(FluidType.BUCKET_VOLUME, FluidAction.SIMULATE);
+      if (!drained.isEmpty() && drained.getAmount() == FluidType.BUCKET_VOLUME) {
+        ItemStack filledBucket = drained.getFluidType().getBucket(drained);
+        if (!filledBucket.isEmpty()) {
+          if (!world.isClientSide()) {
+            FluidStack actual = handler.drain(drained.copy(), FluidAction.EXECUTE);
+            if (actual.getAmount() == FluidType.BUCKET_VOLUME) {
+              world.playSound(null, pos, getFillSound(actual), SoundSource.BLOCKS, 1.0F, 1.0F);
+              sendStatusMessage(player, Component.translatable(KEY_DRAINED, COMMA_FORMAT.format(FluidType.BUCKET_VOLUME), actual.getHoverName()));
+              if (!player.isCreative()) {
+                player.setItemInHand(hand, ItemUtils.createFilledResult(held, player, filledBucket));
+              }
+              return FluidInteractionResult.FILLED_STACK;
+            }
+            handler.fill(actual, FluidAction.EXECUTE);
+          }
+          return FluidInteractionResult.CONTAINER;
+        }
+      }
     }
     return FluidInteractionResult.MISSING;
   }
 
+  /** Sends an action-bar style status message when possible. */
+  private static void sendStatusMessage(Player player, Component message) {
+    if (player instanceof ServerPlayer serverPlayer) {
+      serverPlayer.sendSystemMessage(message, true);
+    } else {
+      player.sendSystemMessage(message);
+    }
+  }
   /** Plays the sound from filling a TE */
   public static void playEmptySound(Level world, BlockPos pos, Player player, FluidStack transferred) {
     world.playSound(null, pos, getEmptySound(transferred), SoundSource.BLOCKS, 1.0F, 1.0F);
-    player.displayClientMessage(Component.translatable(KEY_FILLED, COMMA_FORMAT.format(transferred.getAmount()), transferred.getDisplayName()), true);
+    sendStatusMessage(player, Component.translatable(KEY_FILLED, COMMA_FORMAT.format(transferred.getAmount()), transferred.getHoverName()));
   }
 
   /** Plays the sound from draining a TE */
   public static void playFillSound(Level world, BlockPos pos, Player player, FluidStack transferred) {
     world.playSound(null, pos, getFillSound(transferred), SoundSource.BLOCKS, 1.0F, 1.0F);
-    player.displayClientMessage(Component.translatable(KEY_DRAINED, COMMA_FORMAT.format(transferred.getAmount()), transferred.getDisplayName()), true);
+    sendStatusMessage(player, Component.translatable(KEY_DRAINED, COMMA_FORMAT.format(transferred.getAmount()), transferred.getHoverName()));
   }
 
   /** @deprecated use {@link #interactWithContainer(Level, BlockPos, Player, InteractionHand, BlockHitResult)} */
@@ -221,9 +339,9 @@ public class FluidTransferHelper {
       BlockEntity te = world.getBlockEntity(pos);
       if (te != null) {
         // TE must have a capability
-        LazyOptional<IFluidHandler> teCapability = te.getCapability(ForgeCapabilities.FLUID_HANDLER, hit.getDirection());
-        if (teCapability.isPresent()) {
-          return interactWithContainer(world, pos, teCapability.orElse(EmptyFluidHandler.INSTANCE), player, hand);
+        IFluidHandler teCapability = getFluidHandler(world, pos, hit.getDirection());
+        if (teCapability != null) {
+          return interactWithContainer(world, pos, teCapability, player, hand);
         }
       }
     }
@@ -245,7 +363,7 @@ public class FluidTransferHelper {
     ItemStack stack = player.getItemInHand(hand);
     if (FluidContainerTransferManager.INSTANCE.mayHaveTransfer(stack)) {
       // only actually transfer on the serverside, client just has items
-      if (!world.isClientSide) {
+      if (!world.isClientSide()) {
         FluidStack currentFluid = teHandler.drain(Integer.MAX_VALUE, FluidAction.SIMULATE);
         IFluidContainerTransfer transfer = FluidContainerTransferManager.INSTANCE.getTransfer(stack, currentFluid);
         if (transfer != null) {
@@ -265,12 +383,11 @@ public class FluidTransferHelper {
     }
 
     // if the item has a capability, do a direct transfer
-    ItemStack copy = ItemHandlerHelper.copyStackWithSize(stack, 1);
-    LazyOptional<IFluidHandlerItem> itemCapability = copy.getCapability(ForgeCapabilities.FLUID_HANDLER_ITEM);
-    if (itemCapability.isPresent()) {
+    ItemStack copy = stack.copyWithCount(1);
+    IFluidHandlerItem itemHandler = getFluidItemHandler(copy);
+    if (itemHandler != null) {
       FluidInteractionResult result = FluidInteractionResult.CONTAINER;
-      if (!world.isClientSide) {
-        IFluidHandlerItem itemHandler = itemCapability.resolve().orElseThrow();
+      if (!world.isClientSide()) {
         // first, try filling the TE from the item
         FluidStack transferred = tryTransfer(itemHandler, teHandler, Integer.MAX_VALUE);
         if (!transferred.isEmpty()) {
@@ -326,11 +443,16 @@ public class FluidTransferHelper {
     if (!player.getItemInHand(hand).isEmpty()) {
       BlockEntity te = world.getBlockEntity(pos);
       if (te != null) {
-        LazyOptional<IFluidHandler> teCapability = te.getCapability(ForgeCapabilities.FLUID_HANDLER, hit);
-        if (teCapability.isPresent()) {
-          IFluidHandler handler = teCapability.orElse(EmptyFluidHandler.INSTANCE);
-          return interactWithContainer(world, pos, handler, player, hand).hasContainer()
-            || interactWithFilledBucket(world, pos, handler, player, hand, offset).hasContainer();
+        IFluidHandler handler = getFluidHandler(world, pos, hit);
+        if (handler != null) {
+          // NeoForge exposes many bucket-like items through item fluid capabilities now.
+          // Try the dedicated bucket path first so real buckets are not swallowed by
+          // the generic dynamic-transfer path before the tank receives fluid.
+          FluidInteractionResult bucketResult = interactWithFilledBucket(world, pos, handler, player, hand, offset);
+          if (bucketResult.hasContainer()) {
+            return true;
+          }
+          return interactWithContainer(world, pos, handler, player, hand).hasContainer();
         }
       }
     }
@@ -374,10 +496,9 @@ public class FluidTransferHelper {
       }
 
       // if the item has a capability, do a direct transfer
-      ItemStack copy = ItemHandlerHelper.copyStackWithSize(stack, 1);
-      LazyOptional<IFluidHandlerItem> itemCapability = copy.getCapability(ForgeCapabilities.FLUID_HANDLER_ITEM);
-      if (itemCapability.isPresent()) {
-        IFluidHandlerItem itemHandler = itemCapability.resolve().orElseThrow();
+      ItemStack copy = stack.copyWithCount(1);
+      IFluidHandlerItem itemHandler = getFluidItemHandler(copy);
+      if (itemHandler != null) {
         // first, try filling the TE from the item
         FluidStack transferred = FluidStack.EMPTY;
         // reverse means try TE to item first
@@ -444,10 +565,9 @@ public class FluidTransferHelper {
       }
 
       // if the item has a capability, do a direct transfer
-      ItemStack copy = ItemHandlerHelper.copyStackWithSize(stack, 1);
-      LazyOptional<IFluidHandlerItem> itemCapability = copy.getCapability(ForgeCapabilities.FLUID_HANDLER_ITEM);
-      if (itemCapability.isPresent()) {
-        IFluidHandlerItem itemHandler = itemCapability.resolve().orElseThrow();
+      ItemStack copy = stack.copyWithCount(1);
+      IFluidHandlerItem itemHandler = getFluidItemHandler(copy);
+      if (itemHandler != null) {
         // first, try filling the TE from the item
         FluidStack transferred = tryTransfer(teHandler, itemHandler, fluid.copy());
         if (!transferred.isEmpty()) {
@@ -477,7 +597,7 @@ public class FluidTransferHelper {
   /** Plays sound only to the targeted player. Works by sending a targeted packet to server players, or a local packet to client. */
   @SuppressWarnings("deprecation")
   public static void playUISound(Player player, SoundEvent sound) {
-    if (player.level().isClientSide) {
+    if (player.level().isClientSide()) {
       player.playSound(sound);
     } else if (player instanceof ServerPlayer serverPlayer) {
       serverPlayer.connection.send(new ClientboundSoundPacket(BuiltInRegistries.SOUND_EVENT.wrapAsHolder(sound), player.getSoundSource(), player.getX(), player.getY(), player.getZ(), 1, 1, player.getRandom().nextLong()));

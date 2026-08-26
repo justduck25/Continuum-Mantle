@@ -6,7 +6,6 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BooleanProperty;
 import net.minecraft.world.level.block.state.StateDefinition.Builder;
 import net.minecraft.core.Direction;
-import slimeknights.mantle.client.model.connected.ConnectedModel;
 
 import java.util.Arrays;
 import java.util.EnumMap;
@@ -14,7 +13,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
- * Used in {@link ConnectedModel} to workaround Forge #6841. Allows a multipart block like panes to have connected textures
+ * Used by connected model loaders to workaround Forge #6841. Allows a multipart block like panes to have connected textures
  * @deprecated Only use if the block model uses multipart or weighted random. Ideally Forge will fix the bug and this will no longer be needed
  */
 @Deprecated

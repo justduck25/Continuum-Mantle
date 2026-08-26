@@ -7,7 +7,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
-import net.minecraft.world.inventory.ClickType;
+import net.minecraft.world.inventory.ContainerInput;
 import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
@@ -110,8 +110,8 @@ public class MultiModuleContainerMenu<TILE extends BlockEntity> extends BaseCont
   }
 
   @Override
-  public void clicked(int slotId, int dragType, ClickType type, Player player) {
-    if (slotId == -999 && type == ClickType.QUICK_CRAFT) {
+  public void clicked(int slotId, int dragType, ContainerInput type, Player player) {
+    if (slotId == -999 && type == ContainerInput.QUICK_CRAFT) {
       for (AbstractContainerMenu container : this.subContainers) {
         container.clicked(slotId, dragType, type, player);
       }

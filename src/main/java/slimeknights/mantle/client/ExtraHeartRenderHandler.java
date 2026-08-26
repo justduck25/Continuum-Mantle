@@ -1,23 +1,20 @@
 package slimeknights.mantle.client;
 
 import com.mojang.blaze3d.platform.Window;
-import com.mojang.blaze3d.systems.RenderSystem;
-import net.minecraft.Util;
+import net.minecraft.util.Util;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.Gui;
-import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.renderer.RenderPipelines;
+import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.player.Player;
-import net.minecraftforge.client.event.RenderGuiOverlayEvent;
-import net.minecraftforge.client.gui.overlay.ForgeGui;
-import net.minecraftforge.client.gui.overlay.VanillaGuiOverlay;
-import net.minecraftforge.common.MinecraftForge;
-import net.minecraftforge.eventbus.api.EventPriority;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.neoforged.neoforge.client.event.RenderGuiLayerEvent;
+import net.neoforged.neoforge.client.gui.VanillaGuiLayers;
+import net.neoforged.bus.api.EventPriority;
+import net.neoforged.bus.api.SubscribeEvent;
 import slimeknights.mantle.Mantle;
 import slimeknights.mantle.config.Config;
 import slimeknights.mantle.config.Config.HeartRenderer;
@@ -25,8 +22,7 @@ import slimeknights.mantle.config.Config.HeartRenderer;
 import java.util.Random;
 
 public class ExtraHeartRenderHandler {
-  private static final ResourceLocation ICON_HEARTS = new ResourceLocation(Mantle.modId, "textures/gui/extra_hearts.png");
-  private static final ResourceLocation ICON_VANILLA = Gui.GUI_ICONS_LOCATION;
+  private static final Identifier ICON_HEARTS = Mantle.getResource("textures/gui/extra_hearts.png");
   /** Number of heart color variants */
   private static final int HEART_VARIANTS = 12;
   /** Number of heart color variants */
@@ -72,6 +68,10 @@ public class ExtraHeartRenderHandler {
   /** Last time health was updated */
   private long lastHealthTime = 0;
   private final Random rand = new Random();
+  private static boolean useCustomHeartRenderer() {
+    // TODO 1.21.11: port the custom stacked-heart renderer before canceling vanilla health rendering.
+    return false;
+  }
 
   /* HUD */
 
@@ -80,22 +80,23 @@ public class ExtraHeartRenderHandler {
    * @param event  Event instance
    */
   @SubscribeEvent(priority = EventPriority.LOW)
-  public void renderHealthbar(RenderGuiOverlayEvent.Pre event) {
+  public void renderHealthbar(RenderGuiLayerEvent.Pre event) {
+    if (!useCustomHeartRenderer()) {
+      return;
+    }
     HeartRenderer renderer = Config.HEART_RENDERER.get();
-    if (renderer == HeartRenderer.DISABLE || event.isCanceled() || event.getOverlay() != VanillaGuiOverlay.PLAYER_HEALTH.type()) {
+    if (renderer == HeartRenderer.DISABLE || event.isCanceled() || !VanillaGuiLayers.PLAYER_HEALTH.equals(event.getName())) {
       return;
     }
     // ensure its visible
-    if (!(mc.gui instanceof ForgeGui gui) || mc.options.hideGui || !gui.shouldDrawSurvivalElements()) {
+    if (mc.options.hideGui || mc.gameMode == null || !mc.gameMode.canHurtPlayer()) {
       return;
     }
     Entity renderViewEnity = this.mc.getCameraEntity();
     if (!(renderViewEnity instanceof Player player)) {
       return;
     }
-    gui.setupOverlayRenderState(true, false);
 
-    this.mc.getProfiler().push("health");
 
     // based on the top of Gui#renderPlayerHealth
     int tickCount = this.mc.gui.getGuiTicks();
@@ -124,7 +125,7 @@ public class ExtraHeartRenderHandler {
     // setup window size
     Window window = this.mc.getWindow();
     int left = window.getGuiScaledWidth() / 2 - 91;
-    int top = window.getGuiScaledHeight() - gui.leftHeight;
+    int top = window.getGuiScaledHeight() - 39;
 
     // grab max health as the max of it or the health we will display
     // cap it to 20, as this just determines heart count
@@ -174,7 +175,7 @@ public class ExtraHeartRenderHandler {
     boolean compactAbsorption = showHearts < 10 && absorb <= 2 * (10 - showHearts);
 
     // time to draw heart backgrounds
-    GuiGraphics graphics = event.getGuiGraphics();
+    GuiGraphicsExtractor graphics = event.getGuiGraphics();
 
     // render max health backgrounds
     int absorptionOffset = ROW_HEIGHT;
@@ -220,18 +221,9 @@ public class ExtraHeartRenderHandler {
       renderHearts(graphics, left, top - absorptionOffset, absorpOffset, absorb, 10);
     }
 
-    // prepare the GUI for the event
-    RenderSystem.setShaderTexture(0, ICON_VANILLA);
-    gui.leftHeight += ROW_HEIGHT;
-    if (!compactAbsorption && absorb > 0) {
-      gui.leftHeight += absorptionOffset;
-    }
 
     event.setCanceled(true);
-    RenderSystem.disableBlend();
-    this.mc.getProfiler().pop();
-    //noinspection UnstableApiUsage  I do what I want (more accurately, we override the renderer but want to let others still respond in post)
-    MinecraftForge.EVENT_BUS.post(new RenderGuiOverlayEvent.Post(event.getWindow(), graphics, event.getPartialTick(), VanillaGuiOverlay.PLAYER_HEALTH.type()));
+
   }
 
   /** Computes the color U offset for a given heart index */
@@ -249,7 +241,7 @@ public class ExtraHeartRenderHandler {
    * @param count        Number to render
    * @param indexOffset  Heart to raise for regen
    */
-  private void renderHearts(GuiGraphics graphics, int x, int y, int heartOffset, int count, int indexOffset) {
+  private void renderHearts(GuiGraphicsExtractor graphics, int x, int y, int heartOffset, int count, int indexOffset) {
     int heartsTopColor = (count % 20) / 2;
     int heartIndex = count / 20;
     // if we have 1 full non-vanilla row, render the right side hearts
@@ -270,7 +262,7 @@ public class ExtraHeartRenderHandler {
    * @param current     Current to render
    * @param last        Number previous tick
    */
-  private void renderHeartsWithDamage(GuiGraphics graphics, int x, int y, int heartOffset, int current, int last) {
+  private void renderHeartsWithDamage(GuiGraphicsExtractor graphics, int x, int y, int heartOffset, int current, int last) {
     int currentTopRow = current % 20;
     int currentRight = currentTopRow / 2;
     int lastTopRow = last % 20;
@@ -330,14 +322,14 @@ public class ExtraHeartRenderHandler {
    * @param end         Above the last heart to renderer
    * @param half        If true, renders an extra half heart
    */
-  private void renderHeartRow(GuiGraphics graphics, int x, int y, int indexOffset, int uOffset, int vOffset, int start, int end, boolean half) {
+  private void renderHeartRow(GuiGraphicsExtractor graphics, int x, int y, int indexOffset, int uOffset, int vOffset, int start, int end, boolean half) {
     // draw full hearts
     for (int i = start; i < end; i += 1) {
-      graphics.blit(ICON_HEARTS, x + HEART_OFFSET * i, y + offsets[i + indexOffset], uOffset, vOffset, HEART_SIZE, HEART_SIZE);
+      graphics.blit(RenderPipelines.GUI_TEXTURED, ICON_HEARTS, x + HEART_OFFSET * i, y + offsets[i + indexOffset], uOffset, vOffset, HEART_SIZE, HEART_SIZE, 256, 256);
     }
     // draw half heart
     if (half) {
-      graphics.blit(ICON_HEARTS, x + HEART_OFFSET * end, y + offsets[end + indexOffset], uOffset + HEART_SIZE, vOffset, HEART_SIZE, HEART_SIZE);
+      graphics.blit(RenderPipelines.GUI_TEXTURED, ICON_HEARTS, x + HEART_OFFSET * end, y + offsets[end + indexOffset], uOffset + HEART_SIZE, vOffset, HEART_SIZE, HEART_SIZE, 256, 256);
     }
   }
 

@@ -3,6 +3,7 @@ package slimeknights.mantle.registration.deferred;
 import lombok.Setter;
 import lombok.experimental.Accessors;
 import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.item.BucketItem;
 import net.minecraft.world.item.Item;
@@ -14,12 +15,12 @@ import net.minecraft.world.level.material.FlowingFluid;
 import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.material.MapColor;
 import net.minecraft.world.level.material.PushReaction;
-import net.minecraftforge.eventbus.api.IEventBus;
-import net.minecraftforge.fluids.FluidType;
-import net.minecraftforge.fluids.ForgeFlowingFluid;
-import net.minecraftforge.fluids.ForgeFlowingFluid.Properties;
-import net.minecraftforge.registries.ForgeRegistries;
-import net.minecraftforge.registries.RegistryObject;
+import net.neoforged.bus.api.IEventBus;
+import net.neoforged.neoforge.fluids.FluidType;
+import net.neoforged.neoforge.fluids.BaseFlowingFluid;
+import net.neoforged.neoforge.fluids.BaseFlowingFluid.Properties;
+import net.neoforged.neoforge.registries.NeoForgeRegistries;
+import net.neoforged.neoforge.registries.DeferredHolder;
 import slimeknights.mantle.block.fluid.BurningLiquidBlock;
 import slimeknights.mantle.block.fluid.MobEffectLiquidBlock;
 import slimeknights.mantle.fluid.InvertedFluid;
@@ -47,7 +48,7 @@ public class FluidDeferredRegister extends DeferredRegisterWrapper<Fluid> {
 
   public FluidDeferredRegister(String modID) {
     super(Registries.FLUID, modID);
-    this.fluidTypeRegister = SynchronizedDeferredRegister.create(ForgeRegistries.Keys.FLUID_TYPES, modID);
+    this.fluidTypeRegister = SynchronizedDeferredRegister.create(NeoForgeRegistries.Keys.FLUID_TYPES, modID);
     this.blockRegister = SynchronizedDeferredRegister.create(Registries.BLOCK, modID);
     this.itemRegister = SynchronizedDeferredRegister.create(Registries.ITEM, modID);
   }
@@ -67,7 +68,7 @@ public class FluidDeferredRegister extends DeferredRegisterWrapper<Fluid> {
    * @param <I>   Fluid type
    * @return  Fluid to supply
    */
-  public <I extends FluidType> RegistryObject<I> registerType(String name, Supplier<? extends I> sup) {
+  public <I extends FluidType> DeferredHolder registerType(String name, Supplier<? extends I> sup) {
     return fluidTypeRegister.register(name, sup);
   }
 
@@ -78,7 +79,7 @@ public class FluidDeferredRegister extends DeferredRegisterWrapper<Fluid> {
    * @param <I>   Fluid type
    * @return  Fluid to supply
    */
-  public <I extends Fluid> RegistryObject<I> registerFluid(String name, Supplier<? extends I> sup) {
+  public <I extends Fluid> DeferredHolder registerFluid(String name, Supplier<? extends I> sup) {
     return register.register(name, sup);
   }
 
@@ -144,12 +145,14 @@ public class FluidDeferredRegister extends DeferredRegisterWrapper<Fluid> {
       if (this.bucket != null) {
         throw new IllegalStateException("Bucket already created for " + name);
       }
-      return bucket(itemRegister.register(name + "_bucket", () -> constructor.apply(stillDelayed)));
+      ResourceKey<Item> key = ResourceKey.create(Registries.ITEM, resource(name + "_bucket"));
+      return bucket(itemRegister.register(name + "_bucket", () -> ItemDeferredRegister.withCurrentItemKey(key, () -> constructor.apply(stillDelayed))));
     }
 
     /** Creates the default bucket */
     public Builder bucket() {
-      return bucket(itemRegister.register(name + "_bucket", () -> new BucketItem(stillDelayed, RegistrationHelper.BUCKET_PROPS)));
+      ResourceKey<Item> key = ResourceKey.create(Registries.ITEM, resource(name + "_bucket"));
+      return bucket(itemRegister.register(name + "_bucket", () -> ItemDeferredRegister.withCurrentItemKey(key, () -> new BucketItem(stillDelayed.get(), ItemDeferredRegister.setIdFromCurrentKey(RegistrationHelper.BUCKET_PROPS)))));
     }
 
 
@@ -161,12 +164,13 @@ public class FluidDeferredRegister extends DeferredRegisterWrapper<Fluid> {
       if (this.block != null) {
         throw new IllegalStateException("Block already created for " + name);
       }
-      return block(blockRegister.register(name + "_fluid", () -> constructor.apply((Supplier<FlowingFluid>)(Supplier)stillDelayed)));
+      ResourceKey<Block> key = ResourceKey.create(Registries.BLOCK, resource(name + "_fluid"));
+      return block(blockRegister.register(name + "_fluid", () -> BlockDeferredRegister.withCurrentBlockKey(key, () -> constructor.apply((Supplier<FlowingFluid>)(Supplier)stillDelayed))));
     }
 
     /** Creates the default block from the given material and light level */
     public Builder block(MapColor color, int lightLevel) {
-      return block(sup -> new LiquidBlock(sup, createProperties(color, lightLevel)));
+      return block(sup -> new MantleLiquidBlock(sup.get(), createProperties(color, lightLevel)));
     }
 
     /** Creates a block that lights entities on fire and damages them over time */
@@ -200,14 +204,14 @@ public class FluidDeferredRegister extends DeferredRegisterWrapper<Fluid> {
       if (type == null) {
         this.type();
       }
-      RegistryObject<F> fluid = registerFluid(name, () -> constructor.apply(this));
+      DeferredHolder fluid = registerFluid(name, () -> constructor.apply(this));
       stillDelayed.setSupplier(fluid);
       return new FluidObject<>(resource(name), commonTag, type, fluid);
     }
 
     /** Builds a flowing fluid with the default constructors */
-    public FlowingFluidObject<ForgeFlowingFluid> flowing() {
-      return flowing(ForgeFlowingFluid.Source::new, ForgeFlowingFluid.Flowing::new);
+    public FlowingFluidObject<BaseFlowingFluid> flowing() {
+      return flowing(BaseFlowingFluid.Source::new, BaseFlowingFluid.Flowing::new);
     }
 
     /** Builds a flowing fluid with the default constructors */
@@ -244,6 +248,11 @@ public class FluidDeferredRegister extends DeferredRegisterWrapper<Fluid> {
 
   /** Creates properties for a fluid */
   public static BlockBehaviour.Properties createProperties(MapColor color, int lightLevel) {
-    return BlockBehaviour.Properties.of().mapColor(color).replaceable().noCollission().randomTicks().strength(100.0F).lightLevel(state -> lightLevel).pushReaction(PushReaction.DESTROY).noLootTable().liquid().sound(SoundType.EMPTY);
+    return BlockDeferredRegister.setIdFromCurrentKey(BlockBehaviour.Properties.of().mapColor(color).replaceable().noCollision().randomTicks().strength(100.0F).lightLevel(state -> lightLevel).pushReaction(PushReaction.DESTROY).noLootTable().liquid().sound(SoundType.EMPTY));
+  }
+  private static class MantleLiquidBlock extends LiquidBlock {
+    MantleLiquidBlock(FlowingFluid fluid, BlockBehaviour.Properties properties) {
+      super(fluid, properties);
+    }
   }
 }

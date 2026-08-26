@@ -1,6 +1,6 @@
 package slimeknights.mantle.client.screen;
 
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.network.chat.Component;
@@ -20,6 +20,8 @@ public abstract class ModuleScreen<P extends MultiModuleScreen<?>, C extends Abs
 
   public int yOffset = 0;
   public int xOffset = 0;
+  protected int realWidth;
+  protected int realHeight;
 
   public ModuleScreen(P parent, C container, Inventory playerInventory, Component title, boolean right, boolean bottom) {
     super(container, playerInventory, title);
@@ -29,33 +31,54 @@ public abstract class ModuleScreen<P extends MultiModuleScreen<?>, C extends Abs
     this.bottom = bottom;
   }
 
+  protected int effectiveWidth() {
+    return realWidth > 0 ? realWidth : this.imageWidth;
+  }
+  protected int effectiveHeight() {
+    return realHeight > 0 ? realHeight : this.imageHeight;
+  }
+
+  public int guiLeft() {
+    return this.leftPos;
+  }
+
+  public int guiTop() {
+    return this.topPos;
+  }
+
   public int guiRight() {
-    return this.leftPos + this.imageWidth;
+    return this.leftPos + effectiveWidth();
   }
 
   public int guiBottom() {
-    return this.topPos + this.imageHeight;
+    return this.topPos + effectiveHeight();
   }
 
   public Rect2i getArea() {
-    return new Rect2i(this.leftPos, this.topPos, this.imageWidth, this.imageHeight);
+    int w = effectiveWidth();
+    int h = effectiveHeight();
+    return new Rect2i(this.leftPos, this.topPos, w, h);
   }
 
   @Override
   public void init() {
-    this.leftPos = (this.width - this.imageWidth) / 2;
-    this.topPos = (this.height - this.imageHeight) / 2;
+    int w = effectiveWidth();
+    int h = effectiveHeight();
+    this.leftPos = (this.width - w) / 2;
+    this.topPos = (this.height - h) / 2;
   }
 
   public void updatePosition(int parentX, int parentY, int parentSizeX, int parentSizeY) {
+    int w = effectiveWidth();
+    int h = effectiveHeight();
     if (this.right) {
       this.leftPos = parentX + parentSizeX;
     } else {
-      this.leftPos = parentX - this.imageWidth;
+      this.leftPos = parentX - w;
     }
 
     if (this.bottom) {
-      this.topPos = parentY + parentSizeY - this.imageHeight;
+      this.topPos = parentY + parentSizeY - h;
     } else {
       this.topPos = parentY;
     }
@@ -74,7 +97,7 @@ public abstract class ModuleScreen<P extends MultiModuleScreen<?>, C extends Abs
 
   public boolean isMouseOverFullSlot(double mouseX, double mouseY) {
     for (Slot slot : this.menu.slots) {
-      if (this.parent.isHovering(slot, mouseX, mouseY) && slot.hasItem()) {
+      if (this.parent.isSlotHovering(slot, mouseX, mouseY) && slot.hasItem()) {
         return true;
       }
     }
@@ -82,24 +105,24 @@ public abstract class ModuleScreen<P extends MultiModuleScreen<?>, C extends Abs
   }
 
   /**
-   * Callback to draw background elements
+   * Callback to draw background elements.
    */
-  public void handleDrawGuiContainerBackgroundLayer(GuiGraphics graphics, float partialTicks, int mouseX, int mouseY) {
-    this.renderBg(graphics, partialTicks, mouseX, mouseY);
+  public void handleDrawGuiContainerBackgroundLayer(GuiGraphicsExtractor graphics, float partialTicks, int mouseX, int mouseY) {
+    this.extractBackground(graphics, mouseX, mouseY, partialTicks);
   }
 
   /**
-   * Callback to draw foreground elements
+   * Callback to draw foreground elements.
    */
-  public void handleDrawGuiContainerForegroundLayer(GuiGraphics graphics, int mouseX, int mouseY) {
-    this.renderLabels(graphics, mouseX, mouseY);
+  public void handleDrawGuiContainerForegroundLayer(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
+    this.extractLabels(graphics, mouseX, mouseY);
   }
 
   /**
-   * Callback to draw hovering tooltips
+   * Callback to draw hovering tooltips.
    */
-  public void handleRenderHoveredTooltip(GuiGraphics graphics, int mouseX, int mouseY) {
-    this.renderTooltip(graphics, mouseX, mouseY);
+  public void handleRenderHoveredTooltip(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
+    this.extractTooltip(graphics, mouseX, mouseY);
   }
 
   /**
@@ -112,9 +135,9 @@ public abstract class ModuleScreen<P extends MultiModuleScreen<?>, C extends Abs
   }
 
   /**
-   * Custom mouse click handling.
+   * Custom mouse drag handling.
    *
-   * @return True to prevent the main container handling the mouseclick
+   * @return True to prevent the main container handling the mouse drag
    */
   public boolean handleMouseClickMove(double mouseX, double mouseY, int clickedMouseButton, double timeSinceLastClick) {
     return false;

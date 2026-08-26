@@ -10,11 +10,10 @@ import javax.annotation.Nullable;
 public class BurnableSignItem extends SignItem {
   private final int burnTime;
   public BurnableSignItem(Properties propertiesIn, Block floorBlockIn, Block wallBlockIn, int burnTime) {
-    super(propertiesIn, floorBlockIn, wallBlockIn);
+    super(floorBlockIn, wallBlockIn, propertiesIn);
     this.burnTime = burnTime;
   }
 
-  @Override
   public int getBurnTime(ItemStack itemStack, @Nullable RecipeType<?> recipeType) {
     return burnTime;
   }

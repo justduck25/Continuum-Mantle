@@ -1,18 +1,16 @@
 {
-  "type": "mantle:empty_item",
-  "conditions": [
+  "neoforge:conditions": [
     {
       "type": "mantle:tag_filled",
       "registry": "minecraft:fluid",
-      "tag": "forge:honey"
+      "tag": "c:honey"
     }
   ],
+  "type": "mantle:empty_item",
   "fluid": {
     "amount": 250,
-    "tag": "forge:honey"
+    "tag": "c:honey"
   },
-  "input": {
-    "item": "minecraft:honey_bottle"
-  },
+  "input": "minecraft:honey_bottle",
   "result": "minecraft:glass_bottle"
 }

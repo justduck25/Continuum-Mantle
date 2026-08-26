@@ -1,39 +1,39 @@
 package slimeknights.mantle.util;
 
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
-/** @deprecated use new utilities from {@link ResourceLocation} */
+/** @deprecated use new utilities from {@link Identifier} */
 @Deprecated(forRemoval = true)
-public interface IdExtender<T extends ResourceLocation> {
+public interface IdExtender<T extends Identifier> {
   /** Extender for standard resource locations */
   LocationExtender INSTANCE = new LocationExtender() {};
 
   /** Creates a resource location */
   T location(String namespace, String path);
 
-  /** @deprecated use {@link JsonHelper#wrap(ResourceLocation, String, String)} */
+  /** @deprecated use {@link JsonHelper#wrap(Identifier, String, String)} */
   @Deprecated(forRemoval = true)
-  default T wrap(ResourceLocation location, String prefix, String suffix) {
+  default T wrap(Identifier location, String prefix, String suffix) {
     return location(location.getNamespace(), prefix + location.getPath() + suffix);
   }
 
-  /** @deprecated use {@link ResourceLocation#withPrefix(String)} */
+  /** @deprecated use {@link Identifier#withPrefix(String)} */
   @Deprecated(forRemoval = true)
-  default T prefix(ResourceLocation location, String prefix) {
+  default T prefix(Identifier location, String prefix) {
     return location(location.getNamespace(), prefix + location.getPath());
   }
 
-  /** @deprecated use {@link ResourceLocation#withSuffix(String)} */
+  /** @deprecated use {@link Identifier#withSuffix(String)} */
   @Deprecated(forRemoval = true)
-  default T suffix(ResourceLocation location, String suffix) {
+  default T suffix(Identifier location, String suffix) {
     return location(location.getNamespace(), location.getPath() + suffix);
   }
 
   /** Extender for specifically resource locations, used in recipe helpers */
-  interface LocationExtender extends IdExtender<ResourceLocation> {
+  interface LocationExtender extends IdExtender<Identifier> {
     @Override
-    default ResourceLocation location(String namespace, String path) {
-      return new ResourceLocation(namespace, path);
+    default Identifier location(String namespace, String path) {
+      return Identifier.fromNamespaceAndPath(namespace, path);
     }
   }
 }

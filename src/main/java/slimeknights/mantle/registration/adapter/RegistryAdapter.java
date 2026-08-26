@@ -1,21 +1,20 @@
 package slimeknights.mantle.registration.adapter;
 
 import lombok.RequiredArgsConstructor;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraftforge.fml.ModLoadingContext;
-import net.minecraftforge.registries.IForgeRegistry;
+import net.minecraft.resources.Identifier;
+import net.neoforged.fml.ModLoadingContext;
 
-import java.util.Objects;
+import java.util.function.BiConsumer;
 
 /**
- * A convenience wrapper for forge registries, to be used in combination with the {@link net.minecraftforge.registries.RegisterEvent} event.
+ * A convenience wrapper for registries, to be used in combination with the {@link net.neoforged.neoforge.registries.RegisterEvent} event.
  * Simply put it allows you to register things by passing (thing, name) instead of having to set the name inline.
  * There also is a convenience variant for items and itemblocks, see {@link ItemRegistryAdapter}.
  */
 @SuppressWarnings("WeakerAccess")
 @RequiredArgsConstructor
 public class RegistryAdapter<T> {
-  private final IForgeRegistry<T> registry;
+  private final BiConsumer<Identifier, T> register;
   private final String modId;
 
   /**
@@ -23,16 +22,16 @@ public class RegistryAdapter<T> {
    * If this results in the wrong namespace, use the other constructor where you can provide the modid.
    * The modid is used as the namespace for resource locations, so if your mods id is "foo" it will register an item "bar" as "foo:bar".
    */
-  public RegistryAdapter(IForgeRegistry<T> registry) {
-    this(registry, ModLoadingContext.get().getActiveContainer().getModId());
+  public RegistryAdapter(BiConsumer<Identifier, T> register) {
+    this(register, ModLoadingContext.get().getActiveContainer().getModId());
   }
 
   /**
    * Construct a resource location that belongs to the given namespace. Usually your mod.
    * @param name  Name for location
    */
-  public ResourceLocation getResource(String name) {
-    return new ResourceLocation(modId, name);
+  public Identifier getResource(String name) {
+    return Identifier.fromNamespaceAndPath(modId, name);
   }
 
   /**
@@ -54,17 +53,6 @@ public class RegistryAdapter<T> {
   }
 
   /**
-   * Registers an entry using the name from another entry
-   * @param entry  Entry to register
-   * @param name   Entry name to copy
-   * @param <I>    Value type
-   * @return  Registered entry
-   */
-  public <I extends T> I register(I entry, T name) {
-    return this.register(entry, Objects.requireNonNull(registry.getKey(name)));
-  }
-
-  /**
    * General purpose backup registration method. In case you want to set a very specific resource location.
    * You should probably use the special purpose methods instead of this.
    * <p>
@@ -73,8 +61,8 @@ public class RegistryAdapter<T> {
    * @param location  Registry name
    * @return Registry entry
    */
-  public <I extends T> I register(I entry, ResourceLocation location) {
-    registry.register(location, entry);
+  public <I extends T> I register(I entry, Identifier location) {
+    register.accept(location, entry);
     return entry;
   }
 }

@@ -3,21 +3,23 @@ package slimeknights.mantle.recipe.ingredient;
 import com.google.gson.JsonObject;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+import net.minecraft.core.HolderSet;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
+import net.minecraft.world.item.crafting.display.SlotDisplay;
 import net.minecraft.world.level.ItemLike;
 import slimeknights.mantle.data.loadable.common.IngredientLoadable;
 import slimeknights.mantle.data.loadable.primitive.IntLoadable;
 import slimeknights.mantle.data.loadable.record.RecordLoadable;
 
 import java.lang.ref.WeakReference;
-import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Predicate;
-import java.util.stream.Collectors;
 
 /**
  * Extension of the vanilla ingredient to make stack size checks
@@ -25,7 +27,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor(staticName = "of")
 public class SizedIngredient implements Predicate<ItemStack> {
   /** Empty sized ingredient wrapper. Matches only the empty stack of size 0 */
-  public static final SizedIngredient EMPTY = of(Ingredient.EMPTY, 0);
+  public static final SizedIngredient EMPTY = of(EmptyIngredient.VANILLA, 0);
 
   public static final RecordLoadable<SizedIngredient> LOADABLE = RecordLoadable.create(
     IngredientLoadable.DISALLOW_EMPTY.tryDirectField("ingredient", SizedIngredient::getIngredient, "amount_needed"),
@@ -40,7 +42,7 @@ public class SizedIngredient implements Predicate<ItemStack> {
   private final int amountNeeded;
 
   /** Last list of matching stacks from the ingredient */
-  private WeakReference<ItemStack[]> lastIngredientMatch;
+  private WeakReference<List<ItemStack>> lastIngredientMatch;
   /** Cached matching stacks from last time it was requested */
   private List<ItemStack> matchingStacks;
 
@@ -79,7 +81,7 @@ public class SizedIngredient implements Predicate<ItemStack> {
    * @return  Sized ingredient matching any size
    */
   public static SizedIngredient fromTag(TagKey<Item> tag, int amountNeeded) {
-    return of(Ingredient.of(tag), amountNeeded);
+    return of(Ingredient.of(HolderSet.emptyNamed(BuiltInRegistries.ITEM, tag)), amountNeeded);
   }
 
   /**
@@ -109,21 +111,33 @@ public class SizedIngredient implements Predicate<ItemStack> {
    * @return  List of matching stacks
    */
   public List<ItemStack> getMatchingStacks() {
-    ItemStack[] ingredientMatch = ingredient.getItems();
-    // if we never cached, or the array instance changed since we last cached, recache
-    if (matchingStacks == null || lastIngredientMatch.get() != ingredientMatch) {
-      matchingStacks = Arrays.stream(ingredientMatch).map(stack -> {
-        if (stack.getCount() != amountNeeded) {
-          stack = stack.copy();
-          stack.setCount(amountNeeded);
+    List<ItemStack> ingredientMatch;
+    try {
+      ingredientMatch = ingredient.items().map(holder -> new ItemStack(holder.value(), amountNeeded)).toList();
+    } catch (UnsupportedOperationException | IllegalStateException e) {
+      // Minecraft 26.x throws if a tag-backed ingredient is dereferenced while its HolderSet is still a construction placeholder.
+      // SlotDisplay keeps the tag ID, so resolve it from the live item registry when the book/recipe viewer asks for display stacks.
+      if (ingredient.display() instanceof SlotDisplay.TagSlotDisplay tagDisplay) {
+        ArrayList<ItemStack> stacks = new ArrayList<>();
+        try {
+          for (var holder : BuiltInRegistries.ITEM.getTagOrEmpty(tagDisplay.tag())) {
+            stacks.add(new ItemStack(holder.value(), amountNeeded));
+          }
+        } catch (UnsupportedOperationException | IllegalStateException ignored) {
+          // Tags are not ready yet; caller can decide how to display an empty ingredient.
         }
-        return stack;
-      }).collect(Collectors.toList());
+        ingredientMatch = List.copyOf(stacks);
+      } else {
+        ingredientMatch = List.of();
+      }
+    }
+    // if we never cached, or the list instance changed since we last cached, recache
+    if (matchingStacks == null || lastIngredientMatch == null || lastIngredientMatch.get() != ingredientMatch) {
+      matchingStacks = ingredientMatch;
       lastIngredientMatch = new WeakReference<>(ingredientMatch);
     }
     return matchingStacks;
   }
-
   /** use {@link #LOADABLE} with {@link slimeknights.mantle.data.loadable.Loadable#encode(FriendlyByteBuf, Object)} */
   @Deprecated(forRemoval = true)
   public void write(FriendlyByteBuf buffer) {

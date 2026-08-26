@@ -22,7 +22,7 @@ public class TagKeySerializer<T> implements JsonSerializer<TagKey<T>>, JsonDeser
 
   @Override
   public TagKey<T> deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context) throws JsonParseException {
-    return TagKey.create(registry, JsonHelper.convertToResourceLocation(json, "tag"));
+    return TagKey.create(registry, JsonHelper.convertToIdentifier(json, "tag"));
   }
 
   @Override

@@ -1,7 +1,7 @@
 package slimeknights.mantle.client.book.data.content;
 
 import lombok.Getter;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import slimeknights.mantle.Mantle;
 import slimeknights.mantle.client.book.data.BookData;
 import slimeknights.mantle.client.book.data.element.ImageData;
@@ -18,7 +18,7 @@ import java.util.ArrayList;
 import static slimeknights.mantle.client.screen.book.Textures.TEX_MISC;
 
 public class ContentBlockInteraction extends PageContent {
-  public static final ResourceLocation ID = Mantle.getResource("block_interaction");
+  public static final Identifier ID = Mantle.getResource("block_interaction");
 
   public static final transient int TEX_SIZE = 512;
   public static final transient ImageData IMG_SMITHING = new ImageData(TEX_MISC, 0, 0, 88, 55, TEX_SIZE, TEX_SIZE);

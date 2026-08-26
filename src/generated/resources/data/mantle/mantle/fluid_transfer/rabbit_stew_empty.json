@@ -1,18 +1,16 @@
 {
-  "type": "mantle:empty_item",
-  "conditions": [
+  "neoforge:conditions": [
     {
       "type": "mantle:tag_filled",
       "registry": "minecraft:fluid",
-      "tag": "forge:rabbit_stew"
+      "tag": "c:rabbit_stew"
     }
   ],
+  "type": "mantle:empty_item",
   "fluid": {
     "amount": 250,
-    "tag": "forge:rabbit_stew"
+    "tag": "c:rabbit_stew"
   },
-  "input": {
-    "item": "minecraft:rabbit_stew"
-  },
+  "input": "minecraft:rabbit_stew",
   "result": "minecraft:bowl"
 }

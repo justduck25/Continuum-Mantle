@@ -21,9 +21,9 @@ public class TextData implements IHTML {
   /** @deprecated use {@link #linebreak} */
   @Deprecated(forRemoval = true)
   public static final TextData LINEBREAK = new TextData().linebreak(true);
-  private static final Pattern LIST_REGEX = Pattern.compile("^\n?•[ \u00a0]");
+  private static final Pattern LIST_REGEX = Pattern.compile("^\n?(?:\\u2022|Ã¢â‚¬Â¢)[ \u00a0]");
   /** Constant to use in mods wishing to implement bulleted lists that are compatible with the book lists. Will also need to use {@link #linebreak(boolean)} */
-  public static final String LIST_PREFIX = "•\u00a0";
+  public static final String LIST_PREFIX = "\u2022\u00a0";
 
   // TODO 1.21: make no longer nullable
   @Nullable

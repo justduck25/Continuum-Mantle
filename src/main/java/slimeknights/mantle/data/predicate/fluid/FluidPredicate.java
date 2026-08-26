@@ -3,6 +3,7 @@ package slimeknights.mantle.data.predicate.fluid;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.material.Fluid;
+import slimeknights.mantle.Mantle;
 import slimeknights.mantle.data.loadable.Loadables;
 import slimeknights.mantle.data.loadable.record.RecordLoadable;
 import slimeknights.mantle.data.loadable.record.SingletonLoader;
@@ -55,6 +56,18 @@ public interface FluidPredicate extends IJsonPredicate<Fluid> {
   FluidPredicate HAS_BUCKET = simple(fluid -> fluid.getBucket() != Items.AIR);
   /** Checks if the fluid is lighter than air, typically meaning it flows upwards. */
   FluidPredicate LIGHTER_THAN_AIR = simple(fluid -> fluid.getFluidType().isLighterThanAir());
+  /** Registers builtin singleton predicates for serialization. */
+  @SuppressWarnings("unused")
+  boolean REGISTER_BUILTINS = registerBuiltins();
+
+  /** Registers builtin singleton predicates for serialization. */
+  static boolean registerBuiltins() {
+    LOADER.register(Mantle.getResource("source"), SOURCE.getLoader());
+    LOADER.register(Mantle.getResource("has_bucket"), HAS_BUCKET.getLoader());
+    LOADER.register(Mantle.getResource("lighter_than_air"), LIGHTER_THAN_AIR.getLoader());
+    LOADER.register(Mantle.getResource("fluid_type"), FluidTypePredicate.LOADER);
+    return true;
+  }
 
 
   /* Helper methods */

@@ -2,7 +2,6 @@ package slimeknights.mantle.data.loadable;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import lombok.RequiredArgsConstructor;
 import net.minecraft.network.FriendlyByteBuf;
 import slimeknights.mantle.Mantle;
 import slimeknights.mantle.data.loadable.field.ContextKey;
@@ -16,9 +15,12 @@ import java.util.function.Function;
  * Loadable for dealing with legacy parsing elements. For instance, a deprecated JSON field.
  * See also: {@link slimeknights.mantle.data.loadable.field.LegacyField} for a simpler but less flexible approach.
  */
-@RequiredArgsConstructor
 public abstract class LegacyLoadable<T> implements RecordLoadable<T> {
   protected final RecordLoadable<T> base;
+
+  public LegacyLoadable(RecordLoadable<T> base) {
+    this.base = base;
+  }
 
   @Override
   public JsonElement serialize(T object) {

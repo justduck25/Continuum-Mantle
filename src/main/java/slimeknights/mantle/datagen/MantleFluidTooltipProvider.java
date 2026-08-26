@@ -1,11 +1,10 @@
 package slimeknights.mantle.datagen;
 
 import net.minecraft.data.PackOutput;
-import net.minecraftforge.fluids.FluidType;
+import net.neoforged.neoforge.fluids.FluidType;
 import org.jetbrains.annotations.ApiStatus.Internal;
 import slimeknights.mantle.Mantle;
 import slimeknights.mantle.fluid.tooltip.AbstractFluidTooltipProvider;
-import slimeknights.mantle.fluid.tooltip.FluidTooltipHandler;
 
 /** Mantle datagen for fluid tooltips. For mods, don't use this, use {@link AbstractFluidTooltipProvider} */
 @Internal
@@ -17,7 +16,7 @@ public class MantleFluidTooltipProvider extends AbstractFluidTooltipProvider {
   @Override
   protected void addFluids() {
     add("buckets").addUnit("bucket", FluidType.BUCKET_VOLUME);
-    addRedirect(FluidTooltipHandler.DEFAULT_ID, id("buckets"));
+    addRedirect(Mantle.getResource("fallback"), id("buckets"));
     // water divides into bottles then "drops"
     add("water", MantleTags.Fluids.WATER)
       .addUnit("bucket", FluidType.BUCKET_VOLUME)

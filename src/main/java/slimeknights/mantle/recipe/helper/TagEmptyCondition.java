@@ -2,7 +2,7 @@ package slimeknights.mantle.recipe.helper;
 
 import net.minecraft.core.Registry;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.tags.TagKey;
 
 /** @deprecated use {@link slimeknights.mantle.recipe.condition.TagEmptyCondition} */
@@ -12,7 +12,7 @@ public class TagEmptyCondition<T> extends slimeknights.mantle.recipe.condition.T
     super(tag);
   }
 
-  public TagEmptyCondition(ResourceKey<? extends Registry<T>> registry, ResourceLocation name) {
+  public TagEmptyCondition(ResourceKey<? extends Registry<T>> registry, Identifier name) {
     super(registry, name);
   }
 }

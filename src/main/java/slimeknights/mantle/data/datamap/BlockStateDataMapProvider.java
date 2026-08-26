@@ -7,7 +7,7 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.data.CachedOutput;
 import net.minecraft.data.PackOutput;
 import net.minecraft.data.PackOutput.Target;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.properties.Property;
 import slimeknights.mantle.data.GenericDataProvider;
@@ -27,7 +27,7 @@ public abstract class BlockStateDataMapProvider<D> extends GenericDataProvider {
   private final Loadable<D> dataLoader;
   private final String modId;
   private final Map<Block,DataMap> blocks = new HashMap<>();
-  private final Map<ResourceLocation,D> entries = new HashMap<>();
+  private final Map<Identifier,D> entries = new HashMap<>();
   public BlockStateDataMapProvider(PackOutput output, Target type, String folder, Loadable<D> dataLoader, String modId) {
     super(output, type, folder);
     this.dataLoader = dataLoader;
@@ -61,7 +61,7 @@ public abstract class BlockStateDataMapProvider<D> extends GenericDataProvider {
   }
 
   /** Adds an entry that a block may redirect to */
-  protected void entry(ResourceLocation key, D data) {
+  protected void entry(Identifier key, D data) {
     D original = entries.putIfAbsent(key, data);
     if (original != null) {
       throw new IllegalArgumentException("Duplicate entry at " + key + ", original " + original + ", new value " + data);
@@ -70,11 +70,11 @@ public abstract class BlockStateDataMapProvider<D> extends GenericDataProvider {
 
   /** Adds an entry that a block may redirect to */
   protected void entry(String key, D data) {
-    entry(new ResourceLocation(modId, key), data);
+    entry(Identifier.fromNamespaceAndPath(modId, key), data);
   }
 
   /** Record holding a single entry in the variants list */
-  private record Variant<D>(@Nullable D data, @Nullable ResourceLocation parent, StateVariantStringBuilder variant) {}
+  private record Variant<D>(@Nullable D data, @Nullable Identifier parent, StateVariantStringBuilder variant) {}
 
   /** Represents a single file to be generated */
   @RequiredArgsConstructor(access = AccessLevel.PRIVATE)
@@ -90,7 +90,7 @@ public abstract class BlockStateDataMapProvider<D> extends GenericDataProvider {
     }
 
     /** Adds a parent variant, stored as a string */
-    public VariantBuilder variant(ResourceLocation parent) {
+    public VariantBuilder variant(Identifier parent) {
       VariantBuilder builder = new VariantBuilder();
       variants.add(new Variant<>(null, parent, builder));
       return builder;
@@ -98,7 +98,7 @@ public abstract class BlockStateDataMapProvider<D> extends GenericDataProvider {
 
     /** Adds a parent variant, stored as a string */
     public VariantBuilder variant(String parent) {
-      return variant(new ResourceLocation(modId, parent));
+      return variant(Identifier.fromNamespaceAndPath(modId, parent));
     }
 
     /** Serializes this to JSON */
