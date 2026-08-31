@@ -3,6 +3,7 @@ package slimeknights.mantle.data.loadable.common;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import com.google.gson.JsonParseException;
 import com.google.gson.JsonSyntaxException;
 import net.minecraft.core.HolderSet;
@@ -29,6 +30,8 @@ import java.util.List;
 public enum IngredientLoadable implements Loadable<Ingredient> {
   ALLOW_EMPTY,
   DISALLOW_EMPTY;
+
+  private static final int MAX_NETWORK_JSON_LENGTH = 262144;
 
   @Override
   public Ingredient convert(JsonElement element, String key, TypedMap context) {
@@ -81,12 +84,13 @@ public enum IngredientLoadable implements Loadable<Ingredient> {
 
   @Override
   public Ingredient decode(FriendlyByteBuf buffer, TypedMap context) {
-    return Ingredient.CONTENTS_STREAM_CODEC.decode(registryBuffer(buffer));
+    JsonElement json = JsonParser.parseString(buffer.readUtf(MAX_NETWORK_JSON_LENGTH));
+    return convert(json, "ingredient", context);
   }
 
   @Override
   public void encode(FriendlyByteBuf buffer, Ingredient object) {
-    Ingredient.CONTENTS_STREAM_CODEC.encode(registryBuffer(buffer), object);
+    buffer.writeUtf(serialize(object).toString(), MAX_NETWORK_JSON_LENGTH);
   }
 
   /** Supports NeoForge custom ingredient JSON generated in the older ingredient_type/children shape. */

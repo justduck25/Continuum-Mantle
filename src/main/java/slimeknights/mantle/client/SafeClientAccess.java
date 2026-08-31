@@ -6,15 +6,19 @@ import net.minecraft.core.RegistryAccess;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import com.mojang.blaze3d.platform.InputConstants;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.fml.loading.FMLLoader;
 
 
 import javax.annotation.Nullable;
 
 /** Class to add one level of static indirection to client only lookups */
 public class SafeClientAccess {
+  private static final boolean CLIENT = FMLLoader.getCurrent().getDist() == Dist.CLIENT;
+
   /** Gets the currently pressed key for tooltips, returns UNKNOWN on a server */
   public static TooltipKey getTooltipKey() {
-    if (true) {
+    if (CLIENT) {
       return ClientOnly.getPressedKey();
     }
     return TooltipKey.UNKNOWN;
@@ -23,7 +27,7 @@ public class SafeClientAccess {
   /** Gets the client player entity, or null on a server */
   @Nullable
   public static Player getPlayer() {
-    if (true) {
+    if (CLIENT) {
       return ClientOnly.getClientPlayer();
     }
     return null;
@@ -32,7 +36,7 @@ public class SafeClientAccess {
   /** Gets the client player entity, or null on a server */
   @Nullable
   public static Level getLevel() {
-    if (true) {
+    if (CLIENT) {
       return ClientOnly.getClientLevel();
     }
     return null;
@@ -50,7 +54,7 @@ public class SafeClientAccess {
 
   /** Checks if its advanced tooltips */
   public static boolean isAdvancedTooltip() {
-    return true && ClientOnly.isAdvancedTooltip();
+    return CLIENT && ClientOnly.isAdvancedTooltip();
   }
 
   /** This class is only loaded on the client, so is safe to reference client only methods */

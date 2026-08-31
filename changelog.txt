@@ -1,20 +1,10 @@
-Continuum Mantle 26.1.2-1.11.1
-
-Port
-- Ported Mantle to Minecraft 26.1.2 and NeoForge 26.1.
-- Updated the build to use NeoForge ModDev, Java 25 toolchains, and current dependency coordinates.
-- Migrated resource metadata from Forge mods.toml to NeoForge neoforge.mods.toml.
-
-Compatibility
-- Updated recipe, ingredient, fluid, loot, network, model, book, command, and registry helpers for the 26.1 API surface.
-- Updated generated fluid transfer data and tag paths to the current singular tag folder layout.
-- Restored client-side model helpers for retextured blocks, retextured items, connected models, item layers, and book structure previews.
+Continuum Mantle 26.1.2-1.11.2
 
 Fixes
-- Improved recipe sync failures so loadable recipe packet errors include the failing recipe ID.
-- Updated fluid tooltip and transfer handling for current item, potion, and fluid APIs.
-- Updated Mantle networking helpers and packets for NeoForge custom payload handling.
+- Fixed recipe sync disconnects caused by empty item outputs in NeoForge recipe payloads.
+- Fixed recipe sync disconnects when complex ingredients were decoded from network packets.
+- Fixed enchantment predicate syncing for translated enchantment names that no longer carry a bound registry holder.
+- Improved client safety around early keybind checks during modded UI setup.
 
-Version Safety
-- Restricted supported Minecraft versions to [26.1.2,26.2).
-- Restricted supported NeoForge versions to [26.1.2.78,26.2), so older or newer incompatible loaders fail with a clear dependency message.
+Tested
+- Verified with Tinkers' Continuum, Apotheosis, JEI, Patchouli, and AE2-family mods on NeoForge 26.1.2.100.

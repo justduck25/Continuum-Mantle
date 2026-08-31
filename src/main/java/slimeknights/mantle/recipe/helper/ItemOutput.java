@@ -393,12 +393,12 @@ public abstract class ItemOutput implements Supplier<ItemStack> {
 
     @Override
     public ItemOutput decode(FriendlyByteBuf buffer, TypedMap context) {
-      return fromStack(stack.decode(buffer, context));
+      return read(buffer);
     }
 
     @Override
     public void encode(FriendlyByteBuf buffer, ItemOutput object) {
-      stack.encode(buffer, object.get());
+      object.write(buffer);
     }
 
 
