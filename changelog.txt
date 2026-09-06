@@ -1,10 +1,12 @@
-Continuum Mantle 26.1.2-1.11.2
+Continuum Mantle 26.1.2-1.11.3
 
 Fixes
+- Fixed Mantle loadable recipes losing their recipe ID during NeoForge codec loading.
+- Added a fallback recipe ID context for JSON recipe decode, improving compatibility with mods that generate Tinkers/Continuum integration recipes such as Productive Bees.
 - Fixed recipe sync disconnects caused by empty item outputs in NeoForge recipe payloads.
 - Fixed recipe sync disconnects when complex ingredients were decoded from network packets.
 - Fixed enchantment predicate syncing for translated enchantment names that no longer carry a bound registry holder.
 - Improved client safety around early keybind checks during modded UI setup.
 
 Tested
-- Verified with Tinkers' Continuum, Apotheosis, JEI, Patchouli, and AE2-family mods on NeoForge 26.1.2.100.
+- compileJava and assemble passed.

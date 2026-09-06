@@ -39,8 +39,9 @@ public class LoadableRecipeSerializer {
 
   /** Creates a standard serializer from a loadable */
   public static <T extends Recipe<?>> RecipeSerializer<T> of(RecordLoadable<T> loadable) {
+    TypedMap context = fallbackIdContext(TypedMap.EMPTY);
     return new RecipeSerializer<>(
-      MapCodec.assumeMapUnsafe(new LoadableCodec<>(loadable)),
+      MapCodec.assumeMapUnsafe(new LoadableCodec<>(loadable, context)),
       StreamCodec.of((buf, recipe) -> encodeNetwork(buf, loadable, recipe), buf -> decodeNetwork(buf, loadable, TypedMap.EMPTY))
     );
   }
@@ -60,12 +61,24 @@ public class LoadableRecipeSerializer {
         return serializer[0];
       }
     };
-    TypedMap context = TypedMapBuilder.builder().put(TYPE, type.get()).put(TYPED_SERIALIZER, typeAware).build();
+    TypedMap context = fallbackIdContext(TypedMapBuilder.builder().put(TYPE, type.get()).put(TYPED_SERIALIZER, typeAware).build());
     serializer[0] = new RecipeSerializer<>(
       MapCodec.assumeMapUnsafe(new LoadableCodec<>(loadable, context)),
       StreamCodec.of((buf, recipe) -> encodeNetwork(buf, loadable, recipe), buf -> decodeNetwork(buf, loadable, context))
     );
     return serializer[0];
+  }
+
+  /**
+   * NeoForge's codec recipe loader no longer supplies the recipe key to custom map codecs. Legacy Mantle/TCon
+   * recipes still need an ID in their constructors, so provide a harmless fallback for JSON decode. The actual
+   * recipe registry key remains owned by Minecraft's RecipeHolder.
+   */
+  private static TypedMap fallbackIdContext(TypedMap context) {
+    if (context.containsKey(ContextKey.ID)) {
+      return context;
+    }
+    return TypedMapBuilder.builder().putAll(context).put(ContextKey.ID, FALLBACK_ID).build();
   }
 
   private static <T extends Recipe<?>> void encodeNetwork(RegistryFriendlyByteBuf buffer, RecordLoadable<T> loadable, T recipe) {
