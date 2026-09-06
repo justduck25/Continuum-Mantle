@@ -1,6 +1,7 @@
-Continuum Mantle 26.1.2-1.11.3
+Continuum Core 26.1.2-1.11.4
 
 Fixes
+- Renamed the fork branding from Continuum Mantle to Continuum Core while preserving upstream credits and the technical `mantle` mod id for compatibility.
 - Fixed Mantle loadable recipes losing their recipe ID during NeoForge codec loading.
 - Added a fallback recipe ID context for JSON recipe decode, improving compatibility with mods that generate Tinkers/Continuum integration recipes such as Productive Bees.
 - Fixed recipe sync disconnects caused by empty item outputs in NeoForge recipe payloads.

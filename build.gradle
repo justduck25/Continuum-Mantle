@@ -1,5 +1,5 @@
 /*
- * Mantle
+ * Continuum Core
  * Master build file
  * Based on TConstruct's master build file
  * Authors: Sunstrike, ProgWML6
@@ -35,7 +35,7 @@ repositories {
 
 group = 'slimeknights.mantle'
 base {
-    archivesName = 'Mantle'
+    archivesName = 'ContinuumCore'
 }
 java {
     toolchain {
@@ -165,7 +165,7 @@ tasks.named('processResources', ProcessResources).configure {
 tasks.named('jar', Jar).configure {
     manifest {
         attributes([
-                "Specification-Title"     : "Mantle",
+                "Specification-Title"     : "Continuum Core",
                 "Specification-Vendor"    : "Slime Knights",
                 "Specification-Version"   : "1", // We are version 1 of ourselves
                 "Implementation-Title"    : project.name,
