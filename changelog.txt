@@ -1,6 +1,8 @@
-Continuum Core 26.1.2-1.11.4
+Continuum Core 26.1.2-1.11.5
 
 Fixes
+- Fixed recipe item outputs that were created during early datapack loading keeping temporary direct item holders at runtime.
+- Fixed cleaver/severing drops causing massive NBT predicate log spam after dropped items were picked up or scanned.
 - Renamed the fork branding from Continuum Mantle to Continuum Core while preserving upstream credits and the technical `mantle` mod id for compatibility.
 - Fixed Mantle loadable recipes losing their recipe ID during NeoForge codec loading.
 - Added a fallback recipe ID context for JSON recipe decode, improving compatibility with mods that generate Tinkers/Continuum integration recipes such as Productive Bees.

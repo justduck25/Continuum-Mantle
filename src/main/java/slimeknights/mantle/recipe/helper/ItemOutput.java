@@ -6,6 +6,7 @@ import com.mojang.serialization.Codec;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.Holder;
 import net.minecraft.core.component.DataComponentMap;
 import net.minecraft.core.component.DataComponents;
@@ -66,10 +67,10 @@ public abstract class ItemOutput implements Supplier<ItemStack> {
     if (stack.isEmpty()) {
       return ItemStack.EMPTY;
     }
-    if (stack.typeHolder().kind() == Holder.Kind.REFERENCE || !stack.getItem().builtInRegistryHolder().areComponentsBound()) {
+    if (stack.typeHolder().kind() == Holder.Kind.REFERENCE) {
       return stack.copy();
     }
-    ItemStack copy = new ItemStack(stack.getItem().builtInRegistryHolder(), stack.getCount(), stack.getComponentsPatch());
+    ItemStack copy = new ItemStack(BuiltInRegistries.ITEM.wrapAsHolder(stack.getItem()), stack.getCount(), stack.getComponentsPatch());
     copy.setPopTime(stack.getPopTime());
     return copy;
   }
