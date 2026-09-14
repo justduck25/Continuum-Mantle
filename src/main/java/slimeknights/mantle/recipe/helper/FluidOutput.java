@@ -255,6 +255,7 @@ public abstract class FluidOutput implements Supplier<FluidStack> {
 
     private final boolean nonEmpty;
     private final RecordLoadable<FluidStack> stack;
+    private final RecordLoadable<FluidStack> networkStack;
     Loadable(boolean nonEmpty) {
       this.nonEmpty = nonEmpty;
       // figure out the stack serializer to use based on the two parameters
@@ -264,6 +265,10 @@ public abstract class FluidOutput implements Supplier<FluidStack> {
       } else {
         this.stack = FluidStackLoadable.OPTIONAL_STACK_NBT;
       }
+      // Network sync must tolerate empty resolved tag outputs from third-party datapacks.
+      // JSON/datagen still validates required outputs; this just prevents bad pack data from
+      // disconnecting clients while NeoForge sends recipe_content.
+      this.networkStack = FluidStackLoadable.OPTIONAL_STACK_NBT;
     }
 
     @Override
@@ -287,12 +292,12 @@ public abstract class FluidOutput implements Supplier<FluidStack> {
 
     @Override
     public FluidOutput decode(FriendlyByteBuf buffer, TypedMap context) {
-      return fromStack(stack.decode(buffer, context));
+      return fromStack(networkStack.decode(buffer, context));
     }
 
     @Override
     public void encode(FriendlyByteBuf buffer, FluidOutput object) {
-      stack.encode(buffer, object.get());
+      networkStack.encode(buffer, object.get());
     }
 
 
