@@ -1,15 +1,9 @@
-Continuum Core 26.1.2-1.11.5
+Continuum Core 26.1.2-1.11.6
 
 Fixes
-- Fixed recipe item outputs that were created during early datapack loading keeping temporary direct item holders at runtime.
-- Fixed cleaver/severing drops causing massive NBT predicate log spam after dropped items were picked up or scanned.
-- Renamed the fork branding from Continuum Mantle to Continuum Core while preserving upstream credits and the technical `mantle` mod id for compatibility.
-- Fixed Mantle loadable recipes losing their recipe ID during NeoForge codec loading.
-- Added a fallback recipe ID context for JSON recipe decode, improving compatibility with mods that generate Tinkers/Continuum integration recipes such as Productive Bees.
-- Fixed recipe sync disconnects caused by empty item outputs in NeoForge recipe payloads.
-- Fixed recipe sync disconnects when complex ingredients were decoded from network packets.
-- Fixed enchantment predicate syncing for translated enchantment names that no longer carry a bound registry holder.
-- Improved client safety around early keybind checks during modded UI setup.
+- Fixed a recipe sync crash that could disconnect or crash clients when a datapack or third-party mod produced an empty fluid output during NeoForge recipe payload syncing.
+- Empty fluid recipe outputs are now tolerated during network sync, while normal recipe/datagen validation remains strict.
 
-Tested
-- compileJava and assemble passed.
+Notes
+- This targets the reported `FluidStack cannot be empty` / `neoforge:recipe_content` crash path.
+- Tested by building the Core jar and loading a large modpack-style client until world load; the original fluid packet crash did not reproduce.
