@@ -107,12 +107,16 @@ public class FluidTransferHelper {
           // failed to fill everything we drained, so try putting the extra back
           if (actualFill < drainedFluid.getAmount()) {
             int toReturn = drainedFluid.getAmount() - actualFill;
+            FluidStack returnedFluid = drainedFluid.copyWithAmount(toReturn);
             drainedFluid.setAmount(actualFill);
-            int returned = input.fill(drainedFluid.copyWithAmount(toReturn), FluidAction.EXECUTE);
+            int returned = input.fill(returnedFluid, FluidAction.EXECUTE);
             // failed to put the rest back, so all that's left to do is delete it
             if (returned < toReturn) {
               Mantle.logger.error("Lost {} fluid during transfer", toReturn - returned);
             }
+          }
+          if (actualFill <= 0) {
+            return FluidStack.EMPTY;
           }
         }
         return drainedFluid;
@@ -202,6 +206,51 @@ public class FluidTransferHelper {
     ItemAccess access = ItemAccess.forStack(stack).oneByOne();
     ResourceHandler<FluidResource> handler = access.getCapability(Capabilities.Fluid.ITEM);
     return handler == null ? null : new FluidResourceHandlerItemAdapter(handler, access);
+  }
+
+  /** Gets how much fluid can be drained from an item fluid handler. */
+  private static int getDrainableAmount(IFluidHandlerItem handler) {
+    int amount = 0;
+    for (int i = 0; i < handler.getTanks(); i++) {
+      amount += handler.getFluidInTank(i).getAmount();
+    }
+    return amount;
+  }
+
+  /** Gets how much of the given fluid can fit in an item fluid handler. */
+  private static int getFillableAmount(IFluidHandlerItem handler, FluidStack fluid) {
+    if (fluid.isEmpty()) {
+      return 0;
+    }
+    int amount = 0;
+    for (int i = 0; i < handler.getTanks(); i++) {
+      if (handler.isFluidValid(i, fluid)) {
+        FluidStack contained = handler.getFluidInTank(i);
+        if (contained.isEmpty() || FluidStack.isSameFluidSameComponents(contained, fluid)) {
+          amount += Math.max(0, handler.getTankCapacity(i) - contained.getAmount());
+        }
+      }
+    }
+    return amount;
+  }
+
+  /** Transfers fluid from a tank into an item, capped to the item's free space. */
+  private static FluidStack tryFillItem(IFluidHandler teHandler, IFluidHandlerItem itemHandler) {
+    FluidStack available = teHandler.drain(Integer.MAX_VALUE, FluidAction.SIMULATE);
+    int fillable = getFillableAmount(itemHandler, available);
+    if (fillable <= 0) {
+      return FluidStack.EMPTY;
+    }
+    return tryTransfer(teHandler, itemHandler, available.copyWithAmount(Math.min(available.getAmount(), fillable)));
+  }
+
+  /** Transfers fluid from an item into a tank, capped to the fluid actually stored in the item. */
+  private static FluidStack tryEmptyItem(IFluidHandlerItem itemHandler, IFluidHandler teHandler) {
+    int drainable = getDrainableAmount(itemHandler);
+    if (drainable <= 0) {
+      return FluidStack.EMPTY;
+    }
+    return tryTransfer(itemHandler, teHandler, drainable);
   }
   /** Return options for interaction methods */
   public enum FluidInteractionResult {
@@ -389,13 +438,13 @@ public class FluidTransferHelper {
       FluidInteractionResult result = FluidInteractionResult.CONTAINER;
       if (!world.isClientSide()) {
         // first, try filling the TE from the item
-        FluidStack transferred = tryTransfer(itemHandler, teHandler, Integer.MAX_VALUE);
+        FluidStack transferred = tryEmptyItem(itemHandler, teHandler);
         if (!transferred.isEmpty()) {
           playEmptySound(world, pos, player, transferred);
           result = FluidInteractionResult.DRAINED_STACK;
         } else {
           // if that failed, try filling the item handler from the TE
-          transferred = tryTransfer(teHandler, itemHandler, Integer.MAX_VALUE);
+          transferred = tryFillItem(teHandler, itemHandler);
           if (!transferred.isEmpty()) {
             playFillSound(world, pos, player, transferred);
             result = FluidInteractionResult.FILLED_STACK;
@@ -504,18 +553,18 @@ public class FluidTransferHelper {
         // reverse means try TE to item first
         boolean didFill = true;
         if (direction == TransferDirection.REVERSE) {
-          transferred = tryTransfer(teHandler, itemHandler, Integer.MAX_VALUE);
+          transferred = tryFillItem(teHandler, itemHandler);
         }
         // if not reverse or reverse failed, try filling TE from item
         if (direction.canEmpty() && transferred.isEmpty()) {
-          transferred = tryTransfer(itemHandler, teHandler, Integer.MAX_VALUE);
+          transferred = tryEmptyItem(itemHandler, teHandler);
           if (!transferred.isEmpty()) {
             didFill = false;
           }
         }
         // if that failed, try filling the item handler from the TE
         if (direction != TransferDirection.REVERSE && direction.canFill() && transferred.isEmpty()) {
-          transferred = tryTransfer(teHandler, itemHandler, Integer.MAX_VALUE);
+          transferred = tryFillItem(teHandler, itemHandler);
         }
         // if either worked, update the player's inventory
         if (!transferred.isEmpty()) {
@@ -569,7 +618,8 @@ public class FluidTransferHelper {
       IFluidHandlerItem itemHandler = getFluidItemHandler(copy);
       if (itemHandler != null) {
         // first, try filling the TE from the item
-        FluidStack transferred = tryTransfer(teHandler, itemHandler, fluid.copy());
+        int fillable = getFillableAmount(itemHandler, fluid);
+        FluidStack transferred = fillable <= 0 ? FluidStack.EMPTY : tryTransfer(teHandler, itemHandler, fluid.copyWithAmount(Math.min(fluid.getAmount(), fillable)));
         if (!transferred.isEmpty()) {
           stack.shrink(1);
           return new TransferResult(itemHandler.getContainer(), transferred, true);
