@@ -180,9 +180,19 @@ public abstract class FluidOutput implements Supplier<FluidStack> {
   @RequiredArgsConstructor
   private static class OfStack extends FluidOutput {
     private final FluidStack stack;
+    private FluidStack registeredStack;
 
     @Override
     public FluidStack get() {
+      if (stack.typeHolder().unwrapKey().isEmpty()) {
+        Holder.Reference<Fluid> holder = stack.getFluid().builtInRegistryHolder();
+        if (holder.areComponentsBound()) {
+          if (registeredStack == null) {
+            registeredStack = new FluidStack(holder, stack.getAmount(), stack.getComponentsPatch());
+          }
+          return registeredStack;
+        }
+      }
       return stack;
     }
 
@@ -193,7 +203,7 @@ public abstract class FluidOutput implements Supplier<FluidStack> {
 
     @Override
     public void serialize(JsonObject json) {
-      FluidStackLoadable.OPTIONAL_STACK_NBT.serialize(stack, json);
+      FluidStackLoadable.OPTIONAL_STACK_NBT.serialize(get(), json);
     }
   }
 
