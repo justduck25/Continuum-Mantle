@@ -25,6 +25,7 @@ import slimeknights.mantle.util.RegistryHelper;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 /**
@@ -212,7 +213,7 @@ public abstract class FluidIngredient implements IAmLoadable {
 
     @Override
     public boolean test(Fluid fluid) {
-      return fluid == this.fluid;
+      return fluid.isSame(this.fluid) || Objects.equals(BuiltInRegistries.FLUID.getKey(fluid), BuiltInRegistries.FLUID.getKey(this.fluid));
     }
 
     @Override
@@ -239,10 +240,9 @@ public abstract class FluidIngredient implements IAmLoadable {
       return TAG_MATCH;
     }
 
-    @SuppressWarnings("deprecation")  // its a perfectly reasonable method to use mojang
     @Override
     public boolean test(Fluid fluid) {
-      return fluid.is(tag);
+      return fluid.builtInRegistryHolder().is(tag) || RegistryHelper.contains(BuiltInRegistries.FLUID, tag, fluid);
     }
 
     @Override
@@ -304,7 +304,7 @@ public abstract class FluidIngredient implements IAmLoadable {
     @Override
     public List<FluidStack> getAllFluids() {
       return ingredients.stream()
-                        .flatMap(ingredient -> ingredient.getFluids().stream())
+                        .flatMap(ingredient -> ingredient.getAllFluids().stream())
                         .collect(Collectors.toList());
     }
   }

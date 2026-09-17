@@ -44,7 +44,7 @@ public abstract class ItemIngredient implements ICustomIngredient {
 
   @Override
   public boolean test(@Nullable ItemStack stack) {
-    return stack != null && (items.contains(stack.getItem()) || tag != null && stack.is(tag));
+    return stack != null && (items.contains(stack.getItem()) || tag != null && stack.typeHolder().is(tag));
   }
 
   @Override

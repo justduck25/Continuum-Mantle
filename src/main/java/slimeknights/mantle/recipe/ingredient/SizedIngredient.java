@@ -15,6 +15,7 @@ import net.minecraft.world.level.ItemLike;
 import slimeknights.mantle.data.loadable.common.IngredientLoadable;
 import slimeknights.mantle.data.loadable.primitive.IntLoadable;
 import slimeknights.mantle.data.loadable.record.RecordLoadable;
+import slimeknights.mantle.recipe.helper.IngredientHelper;
 
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
@@ -95,7 +96,7 @@ public class SizedIngredient implements Predicate<ItemStack> {
 
   @Override
   public boolean test(ItemStack stack) {
-    return stack.getCount() >= amountNeeded && ingredient.test(stack);
+    return stack.getCount() >= amountNeeded && IngredientHelper.test(ingredient, stack);
   }
 
   /**
