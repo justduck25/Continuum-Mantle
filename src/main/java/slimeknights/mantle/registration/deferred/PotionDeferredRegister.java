@@ -57,8 +57,8 @@ public class PotionDeferredRegister extends DeferredRegisterWrapper<Potion> {
     }
 
     private Builder with(PotionType type, int duration, int amplifier) {
-      String prefix = type == PotionType.NORMAL ? "" : type.toString().toLowerCase(Locale.ROOT);
-      builder.put(type, register(prefix + '_' + name, () -> new Potion(modID + "." + name, new MobEffectInstance(BuiltInRegistries.MOB_EFFECT.wrapAsHolder(effect.get()), duration, amplifier))));
+      String id = type == PotionType.NORMAL ? name : type.toString().toLowerCase(Locale.ROOT) + "_" + name;
+      builder.put(type, register(id, () -> new Potion(modID + "." + name, new MobEffectInstance(BuiltInRegistries.MOB_EFFECT.wrapAsHolder(effect.get()), duration, amplifier))));
       return this;
     }
 
