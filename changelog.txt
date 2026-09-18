@@ -1,3 +1,15 @@
+Continuum Core 26.1.2-1.12.0
+
+Fixes
+- Item fluid transfers now cap to the container's stored amount or remaining capacity, preventing smeltery fluids from being over-drained during bucket and copper can interactions.
+- Recipe fluid outputs now resolve registered fluid holders instead of leftover direct holders from datagen, so runtime drops and recipe results keep a stable fluid identity.
+- Unbound datapack item tags no longer crash recipe tests during ingredient matching.
+- Normal potions are registered without a leading underscore in their IDs.
+- Datapack item tags are looked up from the live registry access, not only builtin item holders, so tagged items such as slimeballs match at runtime.
+
+Compatibility
+- This library release is intended for Continuum Construct 3.12.0.0 on Minecraft 26.1.2 / NeoForge 26.1.2.
+
 Continuum Core 26.1.2-1.11.6
 
 Fixes
