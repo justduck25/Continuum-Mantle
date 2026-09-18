@@ -57,18 +57,17 @@ public final class RegistryHelper {
   @SuppressWarnings({"unchecked", "rawtypes"})
   public static <T> Stream<T> getTagValueStream(TagKey<T> key) {
     Registry<T> registry = getRegistry(key.registry());
-    if (registry != null) {
-      return getTagValueStream(registry, key);
-    }
+    Stream<T> builtin = registry != null ? getTagValueStream(registry, key) : Stream.empty();
     if (fallbackRegistryAccess != null) {
       try {
         HolderLookup.RegistryLookup<T> lookup = fallbackRegistryAccess.lookupOrThrow((ResourceKey) key.registry());
-        return lookup.get(key).stream().flatMap(named -> named.stream()).map(Holder::value);
+        Stream<T> live = lookup.get(key).stream().flatMap(named -> named.stream()).map(Holder::value);
+        return Stream.concat(builtin, live).distinct();
       } catch (Exception ignored) {
-        return Stream.empty();
+        return builtin;
       }
     }
-    return Stream.empty();
+    return builtin;
   }
 
   public static <T> Supplier<T> getHolder(DefaultedRegistry<T> registry, T entry) {
@@ -90,7 +89,11 @@ public final class RegistryHelper {
 
   @SuppressWarnings("deprecation")
   public static boolean contains(TagKey<Item> tag, Item value) {
-    return value.builtInRegistryHolder().is(tag);
+    if (value.builtInRegistryHolder().is(tag)) {
+      return true;
+    }
+    // 26.1 datapack tags live on the reloadable lookup, not the builtin item holder
+    return getTagValueStream(tag).anyMatch(entry -> entry == value);
   }
 
   @SuppressWarnings("deprecation")
