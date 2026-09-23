@@ -5,6 +5,7 @@ import com.mojang.serialization.Dynamic;
 import lombok.Getter;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.core.NonNullList;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
@@ -221,17 +222,24 @@ public abstract class InventoryBlockEntity extends NameableBlockEntity implement
   }
 
   /**
-   * Writes the contents of the inventory to the tag
+   * Writes the contents of the inventory to the tag.
+   * Uses the world registry when the block entity is placed. Built-in registries omit datapack registries such as enchantments.
    */
   public void writeInventoryToNBT(CompoundTag tag) {
+    this.writeInventoryToNBT(tag, this.registryLookup());
+  }
+
+  /** Writes the contents of the inventory using the supplied registry lookup. */
+  public void writeInventoryToNBT(CompoundTag tag, HolderLookup.Provider registries) {
     Container inventory = this;
     ListTag nbttaglist = new ListTag();
+    RegistryOps<Tag> ops = RegistryOps.create(NbtOps.INSTANCE, registries);
 
     for (int i = 0; i < inventory.getContainerSize(); i++) {
       if (!inventory.getItem(i).isEmpty()) {
         CompoundTag itemTag = new CompoundTag();
         itemTag.putByte(TAG_SLOT, (byte) i);
-        CompoundTag stackTag = ItemStack.OPTIONAL_CODEC.encodeStart(RegistryOps.create(NbtOps.INSTANCE, RegistryAccess.fromRegistryOfRegistries(BuiltInRegistries.REGISTRY)), inventory.getItem(i)).getOrThrow(IllegalStateException::new).asCompound().orElseGet(CompoundTag::new);
+        CompoundTag stackTag = ItemStack.OPTIONAL_CODEC.encodeStart(ops, inventory.getItem(i)).getOrThrow(IllegalStateException::new).asCompound().orElseGet(CompoundTag::new);
         itemTag.put("Stack", stackTag);
         nbttaglist.add(itemTag);
       }
@@ -244,8 +252,14 @@ public abstract class InventoryBlockEntity extends NameableBlockEntity implement
    * Reads an inventory from the tag. Overwrites current content
    */
   public void readInventoryFromNBT(CompoundTag tag) {
+    this.readInventoryFromNBT(tag, this.registryLookup());
+  }
+
+  /** Reads an inventory from the tag using the supplied registry lookup. */
+  public void readInventoryFromNBT(CompoundTag tag, HolderLookup.Provider registries) {
     this.inventory.replaceAll(ignored -> ItemStack.EMPTY);
     ListTag list = tag.getListOrEmpty(TAG_ITEMS);
+    RegistryOps<Tag> ops = RegistryOps.create(NbtOps.INSTANCE, registries);
 
     int limit = this.getMaxStackSize();
     ItemStack stack;
@@ -254,7 +268,7 @@ public abstract class InventoryBlockEntity extends NameableBlockEntity implement
       int slot = itemTag.getByteOr(TAG_SLOT, (byte)0) & 255;
       if (slot < this.inventory.size()) {
         CompoundTag stackTag = itemTag.getCompound("Stack").orElse(itemTag);
-        stack = ItemStack.OPTIONAL_CODEC.parse(new Dynamic<>(RegistryOps.create(NbtOps.INSTANCE, RegistryAccess.fromRegistryOfRegistries(BuiltInRegistries.REGISTRY)), stackTag)).getOrThrow(IllegalStateException::new);
+        stack = ItemStack.OPTIONAL_CODEC.parse(new Dynamic<>(ops, stackTag)).getOrThrow(IllegalStateException::new);
         if (!stack.isEmpty() && stack.getCount() > limit) {
           stack.setCount(limit);
         }
@@ -263,6 +277,14 @@ public abstract class InventoryBlockEntity extends NameableBlockEntity implement
     }
   }
 
+
+  /** World registries when placed. Built-in registries do not contain enchantments. */
+  protected HolderLookup.Provider registryLookup() {
+    if (this.level != null) {
+      return this.level.registryAccess();
+    }
+    return RegistryAccess.fromRegistryOfRegistries(BuiltInRegistries.REGISTRY);
+  }
 
   /** Writes the contents of the inventory using the Minecraft 26 value output API. */
   protected void writeInventoryToOutput(ValueOutput output) {

@@ -25,6 +25,7 @@ import slimeknights.mantle.block.fluid.BurningLiquidBlock;
 import slimeknights.mantle.block.fluid.MobEffectLiquidBlock;
 import slimeknights.mantle.fluid.InvertedFluid;
 import slimeknights.mantle.fluid.InvertedFluidType;
+import slimeknights.mantle.fluid.MantleFlowingFluid;
 import slimeknights.mantle.fluid.TextureFluidType;
 import slimeknights.mantle.fluid.UnplaceableFluid;
 import slimeknights.mantle.registration.DelayedSupplier;
@@ -211,7 +212,7 @@ public class FluidDeferredRegister extends DeferredRegisterWrapper<Fluid> {
 
     /** Builds a flowing fluid with the default constructors */
     public FlowingFluidObject<BaseFlowingFluid> flowing() {
-      return flowing(BaseFlowingFluid.Source::new, BaseFlowingFluid.Flowing::new);
+      return flowing(MantleFlowingFluid.Source::new, MantleFlowingFluid.Flowing::new);
     }
 
     /** Builds a flowing fluid with the default constructors */
