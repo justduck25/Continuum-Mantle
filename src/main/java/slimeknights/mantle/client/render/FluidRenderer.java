@@ -4,6 +4,7 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.block.FluidModel;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
@@ -11,7 +12,7 @@ import net.minecraft.client.resources.model.sprite.SpriteId;
 import net.minecraft.core.Direction;
 import net.minecraft.resources.Identifier;
 import net.minecraft.client.renderer.texture.TextureAtlas;
-import slimeknights.mantle.fluid.texture.FluidTextureManager;
+import net.neoforged.neoforge.client.fluid.FluidTintSource;
 import net.neoforged.neoforge.fluids.FluidStack;
 import net.neoforged.neoforge.fluids.FluidType;
 import org.joml.Matrix4f;
@@ -29,6 +30,42 @@ public class FluidRenderer {
    */
   public static TextureAtlasSprite getBlockSprite(Identifier sprite) {
     return Minecraft.getInstance().getAtlasManager().get(new SpriteId(TextureAtlas.LOCATION_BLOCKS, sprite));
+  }
+
+  /**
+   * Still sprite registered for this fluid. Mods publish this on the fluid model;
+   * Mantle's fluid texture map only contains fluids that opted into that JSON.
+   */
+  public static TextureAtlasSprite getStillSprite(FluidStack fluid) {
+    return fluidModel(fluid).stillMaterial().sprite();
+  }
+
+  /** Flowing sprite registered for this fluid. */
+  public static TextureAtlasSprite getFlowingSprite(FluidStack fluid) {
+    return fluidModel(fluid).flowingMaterial().sprite();
+  }
+
+  /**
+   * Tint from the fluid model. No tint means the texture is already colored.
+   * A tint with a zero alpha is made opaque; a completely empty tint is white so the texture stays visible.
+   */
+  public static int getFluidColor(FluidStack fluid) {
+    FluidTintSource tint = fluidModel(fluid).fluidTintSource();
+    if (tint == null) {
+      return 0xFFFFFFFF;
+    }
+    int color = tint.colorAsStack(fluid);
+    if ((color & 0xFF000000) == 0) {
+      color |= 0xFF000000;
+      if ((color & 0x00FFFFFF) == 0) {
+        return 0xFFFFFFFF;
+      }
+    }
+    return color;
+  }
+
+  private static FluidModel fluidModel(FluidStack fluid) {
+    return Minecraft.getInstance().getModelManager().getFluidStateModelSet().get(fluid.getFluid().defaultFluidState());
   }
 
   /**
@@ -259,9 +296,9 @@ public class FluidRenderer {
 
     // fluid attributes, fetch once for all fluids to save effort
     FluidType type = fluid.getFluid().getFluidType();
-    TextureAtlasSprite still = getBlockSprite(FluidTextureManager.getStillTexture(type));
-    TextureAtlasSprite flowing = getBlockSprite(FluidTextureManager.getFlowingTexture(type));
-    int color = FluidTextureManager.getColor(type);
+    TextureAtlasSprite still = getStillSprite(fluid);
+    TextureAtlasSprite flowing = getFlowingSprite(fluid);
+    int color = getFluidColor(fluid);
     light = withBlockLight(light, type.getLightLevel(fluid));
     boolean isGas = type.isLighterThanAir();
 
@@ -313,10 +350,10 @@ public class FluidRenderer {
 
     // fluid attributes
     FluidType type = fluid.getFluid().getFluidType();
-    TextureAtlasSprite still = getBlockSprite(FluidTextureManager.getStillTexture(type));
-    TextureAtlasSprite flowing = getBlockSprite(FluidTextureManager.getFlowingTexture(type));
+    TextureAtlasSprite still = getStillSprite(fluid);
+    TextureAtlasSprite flowing = getFlowingSprite(fluid);
     boolean isGas = type.isLighterThanAir();
-    int color = FluidTextureManager.getColor(type);
+    int color = getFluidColor(fluid);
     light = withBlockLight(light, type.getLightLevel(fluid));
 
     // determine height based on fluid amount
