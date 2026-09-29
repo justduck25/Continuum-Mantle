@@ -1,3 +1,13 @@
+Continuum Core 26.1.2-1.12.1
+
+Fixes
+- Placed inventories can write enchantments. Chunk sync was using the built-in registries, which cannot see them.
+- Standing in a custom fluid source no longer freezes the player, and those fluids drip.
+- Fluid sprites and tint are read from the NeoForge fluid model, so a tank keeps another mod's color.
+
+Compatibility
+- This library release is intended for Continuum Construct 3.12.4 on Minecraft 26.1.2 / NeoForge 26.1.2.
+
 Continuum Core 26.1.2-1.12.0
 
 Fixes
