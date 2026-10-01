@@ -24,6 +24,7 @@ import net.minecraft.world.item.crafting.ShapedRecipe;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import slimeknights.mantle.Mantle;
+import slimeknights.mantle.client.book.BookRecipes;
 import slimeknights.mantle.client.book.data.BookData;
 import slimeknights.mantle.client.book.data.BookLoadException;
 import slimeknights.mantle.client.book.data.element.ImageData;
@@ -262,12 +263,19 @@ public class ContentCrafting extends PageContent {
     return stackList;
   }
 
-  /** Gets a recipe by ID. Clients in 26.1 only expose limited recipe access, so singleplayer books need the integrated server. */
+  /**
+   * Gets a recipe by ID. Clients in 26.1 only expose limited recipe access: use the recipes the server synced
+   * (see {@link BookRecipes}), then the integrated server in singleplayer as before.
+   */
   @Nullable
   private static RecipeHolder<?> getRecipeHolder(Minecraft minecraft, Level level, Identifier recipe) {
     ResourceKey<Recipe<?>> key = ResourceKey.create(Registries.RECIPE, recipe);
     if (level.recipeAccess() instanceof RecipeManager manager) {
       return manager.byKey(key).orElse(null);
+    }
+    RecipeHolder<?> synced = BookRecipes.byKey(key);
+    if (synced != null) {
+      return synced;
     }
     return minecraft.getSingleplayerServer() == null ? null : minecraft.getSingleplayerServer().getRecipeManager().byKey(key).orElse(null);
   }

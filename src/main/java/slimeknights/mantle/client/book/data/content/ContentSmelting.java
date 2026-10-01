@@ -19,6 +19,7 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.Level;
+import slimeknights.mantle.client.book.BookRecipes;
 import slimeknights.mantle.client.book.data.BookData;
 import slimeknights.mantle.client.book.data.element.ImageData;
 import slimeknights.mantle.client.book.data.element.IngredientData;
@@ -108,8 +109,10 @@ public class ContentSmelting extends PageContent {
       assert level != null;
       Identifier recipeId = Identifier.parse(this.recipe);
       ResourceKey<Recipe<?>> key = ResourceKey.create(Registries.RECIPE, recipeId);
+      // 26.1 clients have no recipe manager: use the recipes the server synced (BookRecipes), then the integrated server
       RecipeHolder<?> holder = level.recipeAccess() instanceof RecipeManager manager
         ? manager.byKey(key).orElse(null)
+        : BookRecipes.byKey(key) != null ? BookRecipes.byKey(key)
         : minecraft.getSingleplayerServer() == null ? null : minecraft.getSingleplayerServer().getRecipeManager().byKey(key).orElse(null);
       Recipe<?> recipe = holder != null ? holder.value() : null;
 

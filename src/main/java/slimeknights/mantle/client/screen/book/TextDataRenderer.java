@@ -180,7 +180,8 @@ public class TextDataRenderer {
       }
 
       if (atY >= topY + boxHeight) {
-        graphics.text(fr, "...", x, Math.max(topY, topY + boxHeight - lineHeight), 0xFF000000);
+        // official Mantle used the item's shadow setting here; the 5 argument text() always adds a shadow
+        graphics.text(fr, "...", x, Math.max(topY, topY + boxHeight - lineHeight), 0xFF000000, item.dropshadow);
         break;
       }
     }
