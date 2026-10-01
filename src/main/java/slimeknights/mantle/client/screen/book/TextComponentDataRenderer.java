@@ -146,7 +146,8 @@ public class TextComponentDataRenderer {
       }
 
       if (atY >= topY + boxHeight) {
-        graphics.textRenderer().accept(x, Math.max(topY, topY + boxHeight - lineHeight), net.minecraft.network.chat.Component.literal("..."));
+        // official Mantle drew the ellipsis in the text color (black) with the item's shadow setting; textRenderer() draws white with a shadow
+        graphics.text(fr, "...", x, Math.max(topY, topY + boxHeight - lineHeight), 0xFF000000, item.dropShadow);
         break;
       }
     }

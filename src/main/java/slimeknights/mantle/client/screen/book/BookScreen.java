@@ -82,12 +82,58 @@ public class BookScreen extends Screen {
     this.openPage(book.findPageNumber(page, this.advancementCache));
   }
 
+  /** Cached alt font, built on first use */
+  @Nullable
+  private static Font altFont;
+  /** Cached uniform font, built on first use */
+  @Nullable
+  private static Font uniformFont;
+
+  /** Gets the alt Minecraft font (the enchanting table glyphs), as official Mantle */
   public static Font getAltFont() {
-    return Minecraft.getInstance().font;
+    if (altFont == null) {
+      altFont = fontOverSet(Minecraft.ALT_FONT);
+    }
+    return altFont;
   }
 
+  /** Gets the uniform version of the Minecraft font (the small unifont glyphs), as official Mantle */
   public static Font getUniformFont() {
-    return Minecraft.getInstance().font;
+    if (uniformFont == null) {
+      uniformFont = fontOverSet(Minecraft.UNIFORM_FONT);
+    }
+    return uniformFont;
+  }
+
+  /**
+   * Official Mantle built these fonts over one FontManager font set. 26.1 no longer exposes the font sets, so this wraps the
+   * game font's glyph provider and sends every font resource to the given set, which draws the same glyphs and shares
+   * the game's glyph cache. Falls back to the game font if the provider cannot be read. Before this change both getters
+   * returned the game font, so books that ask for the uniform font drew wide text that wrapped and clipped.
+   */
+  private static Font fontOverSet(Identifier fontSet) {
+    Font base = Minecraft.getInstance().font;
+    try {
+      java.lang.reflect.Field field = Font.class.getDeclaredField("provider");
+      field.setAccessible(true);
+      Font.Provider provider = (Font.Provider) field.get(base);
+      net.minecraft.network.chat.FontDescription target = new net.minecraft.network.chat.FontDescription.Resource(fontSet);
+      return new Font(new Font.Provider() {
+        @Override
+        public net.minecraft.client.gui.GlyphSource glyphs(net.minecraft.network.chat.FontDescription font) {
+          // sprite and player head glyphs keep their own source
+          return provider.glyphs(font instanceof net.minecraft.network.chat.FontDescription.Resource ? target : font);
+        }
+
+        @Override
+        public net.minecraft.client.gui.font.glyphs.EffectGlyph effect() {
+          return provider.effect();
+        }
+      });
+    } catch (ReflectiveOperationException | RuntimeException e) {
+      slimeknights.mantle.Mantle.logger.error("Could not create the {} font for books, using the default font", fontSet, e);
+      return base;
+    }
   }
 
   public Font getFontRenderer() {
@@ -96,6 +142,22 @@ public class BookScreen extends Screen {
 
   private static int opaque(int color) {
     return color | 0xFF000000;
+  }
+
+  /** Page number color used by official Mantle */
+  private static final int PAGE_NUMBER_COLOR = 0xFFAAAAAA;
+
+  /**
+   * Draws scaled cover text the way official Mantle did: in the book's cover text color, with a shadow.
+   * 26.1 skips text without an alpha byte, and the appearance colors are stored without one, so the color is made opaque.
+   */
+  private static void drawString(GuiGraphicsExtractor graphics, Font font, String text, float x, float y, float scale, int color) {
+    Matrix3x2fStack pose = graphics.pose();
+    pose.pushMatrix();
+    pose.translate(x, y);
+    pose.scale(scale, scale);
+    graphics.text(font, text, 0, 0, opaque(color), true);
+    pose.popMatrix();
   }
 
   private static void drawString(GuiGraphicsExtractor graphics, String text, float x, float y, float scale) {
@@ -131,7 +193,8 @@ public class BookScreen extends Screen {
           Matrix3x2fStack pose = graphics.pose();
           pose.pushMatrix();
           drawerTransform(pose, false);
-          graphics.textRenderer().accept((PAGE_WIDTH - fontRenderer.width(pNum)) / 2, PAGE_HEIGHT - 10, Component.literal(pNum));
+          // official page numbers: light gray 0xFFAAAAAA without shadow (textRenderer() draws white with a shadow)
+          graphics.text(fontRenderer, pNum, (PAGE_WIDTH - fontRenderer.width(pNum)) / 2, PAGE_HEIGHT - 10, PAGE_NUMBER_COLOR, false);
           pose.popMatrix();
         }
         if (renderRight) {
@@ -139,7 +202,8 @@ public class BookScreen extends Screen {
           Matrix3x2fStack pose = graphics.pose();
           pose.pushMatrix();
           drawerTransform(pose, true);
-          graphics.textRenderer().accept((PAGE_WIDTH - fontRenderer.width(pNum)) / 2, PAGE_HEIGHT - 10, Component.literal(pNum));
+          // official page numbers: light gray 0xFFAAAAAA without shadow (textRenderer() draws white with a shadow)
+          graphics.text(fontRenderer, pNum, (PAGE_WIDTH - fontRenderer.width(pNum)) / 2, PAGE_HEIGHT - 10, PAGE_NUMBER_COLOR, false);
           pose.popMatrix();
         }
       }
@@ -169,7 +233,7 @@ public class BookScreen extends Screen {
 
     if (debug) {
       graphics.fill(0, 0, fontRenderer.width("DEBUG") + 4, fontRenderer.lineHeight + 4, 0x55000000);
-      graphics.textRenderer().accept(2, 2, Component.literal("DEBUG"));
+      graphics.text(this.font, "DEBUG", 2, 2, 0xFFFFFFFF, false);
     }
 
     super.extractRenderState(graphics, mouseX, mouseY, partialTick);
@@ -193,13 +257,13 @@ public class BookScreen extends Screen {
       graphics.blit(RenderPipelines.GUI_TEXTURED, cover, centerX, centerY, 0, PAGE_HEIGHT_UNSCALED, PAGE_WIDTH_UNSCALED, PAGE_HEIGHT_UNSCALED, TEX_SIZE, TEX_SIZE, opaque(this.book.appearance.coverColor));
       int width = this.font.width(this.book.appearance.title);
       float scale = Math.max(0.01f, Math.min((float)PAGE_WIDTH / Math.max(1, width), 2.5f));
-      drawString(graphics, this.book.appearance.title, (this.width / 2F) / scale + 3 - width / 2F, (this.height / 2F - fontRenderer.lineHeight / 2F) / scale - 4, scale);
+      drawString(graphics, this.font, this.book.appearance.title, (this.width / 2F) / scale + 3 - width / 2F, (this.height / 2F - fontRenderer.lineHeight / 2F) / scale - 4, scale, this.book.appearance.getCoverTextColor());
     }
 
     if (!this.book.appearance.subtitle.isEmpty()) {
       int width = this.font.width(this.book.appearance.subtitle);
       float scale = Math.max(0.01f, Math.min((float)PAGE_WIDTH / Math.max(1, width), 1.5f));
-      drawString(graphics, this.book.appearance.subtitle, (this.width / 2F) / scale + 7 - width / 2F, (this.height / 2F + 100 - fontRenderer.lineHeight * 2) / scale, scale);
+      drawString(graphics, this.font, this.book.appearance.subtitle, (this.width / 2F) / scale + 7 - width / 2F, (this.height / 2F + 100 - fontRenderer.lineHeight * 2) / scale, scale, this.book.appearance.getCoverTextColor());
     }
   }
 

@@ -38,6 +38,7 @@ import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import slimeknights.mantle.Mantle;
 import slimeknights.mantle.block.GaugeBlock;
 import slimeknights.mantle.client.book.BookLoader;
+import slimeknights.mantle.client.book.BookRecipes;
 import slimeknights.mantle.client.book.repository.FileRepository;
 import slimeknights.mantle.client.model.FallbackModelLoader;
 import slimeknights.mantle.client.model.NBTKeyModel;
@@ -121,6 +122,8 @@ public class ClientEvents {
     NeoForge.EVENT_BUS.addListener(EventPriority.NORMAL, false, RenderGuiLayerEvent.Post.class, ClientEvents::renderOffhandAttackIndicator);
     NeoForge.EVENT_BUS.addListener(EventPriority.NORMAL, false, RenderGuiLayerEvent.Post.class, ClientEvents::renderGaugeTooltip);
     NeoForge.EVENT_BUS.register(new ExtraHeartRenderHandler());
+    // book pages that show recipes by ID read the recipes the server synced (26.1 clients have no recipe manager)
+    BookRecipes.init();
   }
 
   // registered with FORGE bus
