@@ -1,12 +1,19 @@
 Continuum Core 26.1.2-1.12.1
 
 Fixes
+- Book pages now render with the correct uniform/alt fonts (official Mantle parity), fixing text wrapping and clipping.
+- Book crafting/smelting recipes show correctly in multiplayer via server-synced recipe map (BookRecipes).
+- Book text colors restored to official Mantle: page numbers 0xFFAAAAAA, cover title/subtitle in cover color with shadow, section labels black, overflow ellipsis black.
+- Station screen titles and Inventory label fixed (alpha byte 0xFF) so they are no longer invisible on 26.1.
 - Placed inventories can write enchantments. Chunk sync was using the built-in registries, which cannot see them.
 - Standing in a custom fluid source no longer freezes the player, and those fluids drip.
 - Fluid sprites and tint are read from the NeoForge fluid model, so a tank keeps another mod's color.
 
 Compatibility
 - This library release is intended for Continuum Construct 3.12.4 on Minecraft 26.1.2 / NeoForge 26.1.2.
+
+Credits
+- Book font, recipe sync, and color fixes by Arthur (therealarthur) with co-authoring by Claude.
 
 Continuum Core 26.1.2-1.12.0
 
