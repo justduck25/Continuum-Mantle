@@ -59,7 +59,8 @@ public class SelectionElement extends SizedBookElement {
         int textW = fontRenderer.width(splitTitle[i]);
         int textX = this.x + WIDTH / 2 - textW / 2;
         int textY = this.y + HEIGHT - fontRenderer.lineHeight / 2 + fontRenderer.lineHeight * i;
-        graphics.textRenderer().accept(textX, textY, net.minecraft.network.chat.Component.literal(splitTitle[i]));
+        // official: black when hovered, half transparent black otherwise, no shadow (textRenderer() draws white with a shadow)
+        graphics.text(fontRenderer, splitTitle[i], textX, textY, hover ? 0xFF000000 : 0x7F000000, false);
       }
     }
   }
