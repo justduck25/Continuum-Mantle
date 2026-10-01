@@ -82,12 +82,58 @@ public class BookScreen extends Screen {
     this.openPage(book.findPageNumber(page, this.advancementCache));
   }
 
+  /** Cached alt font, built on first use */
+  @Nullable
+  private static Font altFont;
+  /** Cached uniform font, built on first use */
+  @Nullable
+  private static Font uniformFont;
+
+  /** Gets the alt Minecraft font (the enchanting table glyphs), as official Mantle */
   public static Font getAltFont() {
-    return Minecraft.getInstance().font;
+    if (altFont == null) {
+      altFont = fontOverSet(Minecraft.ALT_FONT);
+    }
+    return altFont;
   }
 
+  /** Gets the uniform version of the Minecraft font (the small unifont glyphs), as official Mantle */
   public static Font getUniformFont() {
-    return Minecraft.getInstance().font;
+    if (uniformFont == null) {
+      uniformFont = fontOverSet(Minecraft.UNIFORM_FONT);
+    }
+    return uniformFont;
+  }
+
+  /**
+   * Official Mantle built these fonts over one FontManager font set. 26.1 no longer exposes the font sets, so this wraps the
+   * game font's glyph provider and sends every font resource to the given set, which draws the same glyphs and shares
+   * the game's glyph cache. Falls back to the game font if the provider cannot be read. Before this change both getters
+   * returned the game font, so books that ask for the uniform font drew wide text that wrapped and clipped.
+   */
+  private static Font fontOverSet(Identifier fontSet) {
+    Font base = Minecraft.getInstance().font;
+    try {
+      java.lang.reflect.Field field = Font.class.getDeclaredField("provider");
+      field.setAccessible(true);
+      Font.Provider provider = (Font.Provider) field.get(base);
+      net.minecraft.network.chat.FontDescription target = new net.minecraft.network.chat.FontDescription.Resource(fontSet);
+      return new Font(new Font.Provider() {
+        @Override
+        public net.minecraft.client.gui.GlyphSource glyphs(net.minecraft.network.chat.FontDescription font) {
+          // sprite and player head glyphs keep their own source
+          return provider.glyphs(font instanceof net.minecraft.network.chat.FontDescription.Resource ? target : font);
+        }
+
+        @Override
+        public net.minecraft.client.gui.font.glyphs.EffectGlyph effect() {
+          return provider.effect();
+        }
+      });
+    } catch (ReflectiveOperationException | RuntimeException e) {
+      slimeknights.mantle.Mantle.logger.error("Could not create the {} font for books, using the default font", fontSet, e);
+      return base;
+    }
   }
 
   public Font getFontRenderer() {

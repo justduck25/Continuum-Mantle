@@ -124,7 +124,15 @@ public class BookData implements IDataItem, BookScreenOpener {
       }
 
       // Section transformers measure text before BookScreen exists, so keep a concrete font cached here.
-      this.fontRenderer = this.appearance.uniformFont ? BookScreen.getUniformFont() : Minecraft.getInstance().font;
+      // Official Mantle set the uniform font when the appearance asks for it, cleared only its own uniform font otherwise,
+      // and kept any other font a mod assigned (Continuum Construct gives its books a uniform font of its own). Before
+      // this change, this line replaced an assigned font with the game font on every load, so the Tinkers books lost theirs.
+      // this.fontRenderer = this.appearance.uniformFont ? BookScreen.getUniformFont() : Minecraft.getInstance().font;
+      if (this.appearance.uniformFont) {
+        this.fontRenderer = BookScreen.getUniformFont();
+      } else if (this.fontRenderer == null || this.fontRenderer == BookScreen.getUniformFont()) {
+        this.fontRenderer = Minecraft.getInstance().font;
+      }
 
       for (int i = 0; i < this.sections.size(); i++) {
         SectionData section = this.sections.get(i);
