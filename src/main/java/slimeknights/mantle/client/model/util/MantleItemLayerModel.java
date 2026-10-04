@@ -211,7 +211,7 @@ public class MantleItemLayerModel extends AbstractUnbakedModel {
               building = true;
               uStart = ux;
             }
-          } else if (building && (!canDraw || translucent[0])) {
+          } else if (building) {
             int off = facing == Direction.DOWN ? 1 : 0;
             buildSideQuad(quadBuilder, quadConsumer, facing, color, tint, sprite, uStart, v + off, uEnd - uStart, emissivity, builder, interner, chunkLayer, renderType);
             building = false;
@@ -240,7 +240,7 @@ public class MantleItemLayerModel extends AbstractUnbakedModel {
               building = true;
               vStart = v;
             }
-          } else if (building && (!canDraw || translucent[0])) {
+          } else if (building) {
             int off = facing == Direction.EAST ? 1 : 0;
             buildSideQuad(quadBuilder, quadConsumer, facing, color, tint, sprite, uxx + off, vStart, vEnd - vStart, emissivity, builder, interner, chunkLayer, renderType);
             building = false;
