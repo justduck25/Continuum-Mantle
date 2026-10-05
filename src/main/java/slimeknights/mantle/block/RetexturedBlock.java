@@ -32,8 +32,13 @@ public abstract class RetexturedBlock extends Block implements EntityBlock {
   }
 
   @Override
-  public ItemStack getCloneItemStack(LevelReader world, BlockPos pos, BlockState state, boolean includeData, Player player) {
+  public ItemStack getCloneItemStack(LevelReader world, BlockPos pos, BlockState state, boolean includeData) {
     return getPickBlock(world, pos, state);
+  }
+
+  @Override
+  public ItemStack getCloneItemStack(LevelReader world, BlockPos pos, BlockState state, boolean includeData, Player player) {
+    return getCloneItemStack(world, pos, state, includeData);
   }
 
 /* Utils */

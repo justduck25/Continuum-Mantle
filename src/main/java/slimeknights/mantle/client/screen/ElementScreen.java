@@ -39,17 +39,38 @@ public class ElementScreen {
    * @param xPos X-Coordinate on the screen
    * @param yPos Y-Coordinate on the screen
    */
-  public void draw(GuiGraphicsExtractor graphics, int xPos, int yPos, int blitOffset) {
-    graphics.blit(RenderPipelines.GUI_TEXTURED, this.texture, xPos, yPos, this.x, this.y, this.w, this.h, this.texW, this.texH);
+  public void draw(GuiGraphicsExtractor graphics, int xPos, int yPos) {
+    this.drawWithColor(graphics, xPos, yPos, -1);
   }
 
   /**
-   * Draws the element at the given x/y coordinates
+   * Draws the element at the given x/y coordinates with alpha transparency.
    *
-   * @param xPos X-Coordinate on the screen
-   * @param yPos Y-Coordinate on the screen
+   * @param xPos  X-Coordinate on the screen
+   * @param yPos  Y-Coordinate on the screen
+   * @param alpha Alpha value from 0.0F to 1.0F
    */
-  public void draw(GuiGraphicsExtractor graphics, int xPos, int yPos) {
-    this.draw(graphics, xPos, yPos, 0);
+  public void draw(GuiGraphicsExtractor graphics, int xPos, int yPos, float alpha) {
+    int a = Math.clamp((int) (alpha * 255.0F), 0, 255);
+    this.drawWithColor(graphics, xPos, yPos, (a << 24) | 0x00FFFFFF);
+  }
+
+  /**
+   * Draws the element at the given x/y coordinates with an ARGB color tint.
+   *
+   * @param xPos  X-Coordinate on the screen
+   * @param yPos  Y-Coordinate on the screen
+   * @param color ARGB color
+   */
+  public void drawWithColor(GuiGraphicsExtractor graphics, int xPos, int yPos, int color) {
+    graphics.blit(RenderPipelines.GUI_TEXTURED, this.texture, xPos, yPos, this.x, this.y, this.w, this.h, this.texW, this.texH, color);
+  }
+
+  /**
+   * Legacy method for backwards compatibility.
+   */
+  @Deprecated
+  public void draw(GuiGraphicsExtractor graphics, int xPos, int yPos, int blitOffset) {
+    this.draw(graphics, xPos, yPos);
   }
 }
