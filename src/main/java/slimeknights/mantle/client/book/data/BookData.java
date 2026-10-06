@@ -38,7 +38,8 @@ public class BookData implements IDataItem, BookScreenOpener {
   public transient AppearanceData appearance = new AppearanceData();
   public transient HashMap<String, String> strings = new HashMap<>();
   public transient Font fontRenderer;
-  private transient boolean initialized = false;
+  private final Object loadLock = new Object();
+  private transient volatile boolean initialized = false;
 
   protected final transient ArrayList<BookTransformer> transformers = new ArrayList<>();
 
@@ -50,7 +51,14 @@ public class BookData implements IDataItem, BookScreenOpener {
 
   /** Reinitializes the given book */
   public void reset() {
-    this.initialized = false;
+    synchronized (this.loadLock) {
+      this.initialized = false;
+      for (BookRepository repo : this.repositories) {
+        if (repo instanceof slimeknights.mantle.client.book.repository.FileRepository fileRepo) {
+          fileRepo.clearCache();
+        }
+      }
+    }
   }
 
   @Override
@@ -59,13 +67,17 @@ public class BookData implements IDataItem, BookScreenOpener {
       return;
     }
 
-    Mantle.logger.info("Started loading book...");
+    synchronized (this.loadLock) {
+      if (this.initialized) {
+        return;
+      }
 
-    try {
-      this.initialized = true;
-      this.sections.clear();
-      this.strings.clear();
-      this.appearance = new AppearanceData();
+      Mantle.logger.info("Started loading book...");
+
+      try {
+        this.sections.clear();
+        this.strings.clear();
+        this.appearance = new AppearanceData();
 
       for (BookRepository repo : this.repositories) {
         try {
@@ -184,6 +196,8 @@ public class BookData implements IDataItem, BookScreenOpener {
           section.load();
         }
       }
+
+      this.initialized = true;
     } catch (Exception e) {
       this.sections.clear();
       SectionData section = new SectionData(true);
@@ -195,9 +209,11 @@ public class BookData implements IDataItem, BookScreenOpener {
       this.sections.add(section);
 
       Mantle.logger.error("Failed to book due to an unexpected error.", e);
+      this.initialized = true;
     }
 
     Mantle.logger.info("Finished loading book");
+    }
   }
 
   /** Finds the section with the given name, ignoring advancements */

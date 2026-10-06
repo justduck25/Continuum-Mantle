@@ -12,6 +12,7 @@ import slimeknights.mantle.client.book.data.content.ContentSectionList;
 import slimeknights.mantle.client.screen.book.BookScreen;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
@@ -39,17 +40,24 @@ public class IndexTransformer extends BookTransformer {
   public void transform(BookData book) {
     int sectionsPerPage = book.appearance.drawFourColumnIndex ? 12 : 9;
     SectionData index = new SectionData(true) {
+      private List<SectionData> lastVisibleSections = null;
+
       @Override
       public void update(@Nullable BookScreen.AdvancementCache advancementCache) {
-        this.pages.clear();
-
         // find how many other sections to draw
         List<SectionData> visibleSections = getVisibleSections(advancementCache, book);
+        if (this.lastVisibleSections != null && this.lastVisibleSections.equals(visibleSections)) {
+          return;
+        }
+        this.lastVisibleSections = new ArrayList<>(visibleSections);
+
+        this.pages.clear();
         if (visibleSections.isEmpty()) {
           return;
         }
-        visibleSections.remove(0);
-        PageData[] pages = new PageData[ceilingDivide(visibleSections.size(), sectionsPerPage)];
+        List<SectionData> sectionsToDisplay = new ArrayList<>(visibleSections);
+        sectionsToDisplay.remove(0);
+        PageData[] pages = new PageData[ceilingDivide(sectionsToDisplay.size(), sectionsPerPage)];
         for (int i = 0; i < pages.length; i++) {
           pages[i] = new PageData(true);
 
@@ -59,8 +67,8 @@ public class IndexTransformer extends BookTransformer {
           pages[i].content = content;
 
           int pageStart = i * sectionsPerPage;
-          for (int j = pageStart; j - pageStart < 16 && j < visibleSections.size(); j++) {
-            content.addSection(visibleSections.get(j));
+          for (int j = pageStart; j - pageStart < 16 && j < sectionsToDisplay.size(); j++) {
+            content.addSection(sectionsToDisplay.get(j));
           }
         }
 

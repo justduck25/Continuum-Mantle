@@ -24,9 +24,26 @@ public class FileRepository extends BookRepository {
     this.location = location;
   }
 
+  private final java.util.Map<String, Identifier> identifierCache = new java.util.concurrent.ConcurrentHashMap<>();
+  private final java.util.Map<Identifier, Boolean> resourceExistsCache = new java.util.concurrent.ConcurrentHashMap<>();
+  private String lastLang = null;
+
+  public void clearCache() {
+    this.identifierCache.clear();
+    this.resourceExistsCache.clear();
+  }
+
   @Override
   public List<SectionData> getSections() {
     return new ArrayList<>(Arrays.asList(BookLoader.getGson().fromJson(this.resourceToString(this.getResource(this.getIdentifier("index.json"))), SectionData[].class)));
+  }
+
+  @Override
+  public boolean resourceExists(@Nullable Identifier location) {
+    if (location == null) {
+      return false;
+    }
+    return this.resourceExistsCache.computeIfAbsent(location, super::resourceExists);
   }
 
   @Override
@@ -35,20 +52,21 @@ public class FileRepository extends BookRepository {
       return safe ? Identifier.withDefaultNamespace("") : null;
     }
 
+    final String lang = (Minecraft.getInstance().getLanguageManager() != null) ? Minecraft.getInstance().getLanguageManager().getSelected() : null;
+    if (!java.util.Objects.equals(this.lastLang, lang)) {
+      clearCache();
+      this.lastLang = lang;
+    }
+
+    String cacheKey = (safe ? "s:" : "u:") + path;
+    return this.identifierCache.computeIfAbsent(cacheKey, k -> resolveIdentifier(path, safe, lang));
+  }
+
+  private Identifier resolveIdentifier(String path, boolean safe, @Nullable String langPath) {
     if (!path.contains(":")) {
-      String langPath = null;
-
-      //noinspection ConstantConditions - this was proven to be null once
-      if (Minecraft.getInstance().getLanguageManager() != null && Minecraft.getInstance().getLanguageManager().getSelected() != null) {
-        langPath = Minecraft.getInstance().getLanguageManager().getSelected();
-      }
-
       String defaultLangPath = "en_us";
-
       Identifier res;
 
-      // TODO: this can be optimized if we return the resource instead of the location, how feasible is that in practice?
-      //noinspection ConstantConditions - see above
       if (langPath != null) {
         res = Identifier.parse(this.location + "/" + langPath + "/" + path);
         if (this.resourceExists(res)) {
@@ -87,19 +105,18 @@ public class FileRepository extends BookRepository {
       return "";
     }
 
-    try {
-      Iterator<String> iterator = IOUtils.readLines(resource.open(), StandardCharsets.UTF_8).iterator();
+    try (java.io.BufferedReader reader = new java.io.BufferedReader(new java.io.InputStreamReader(resource.open(), StandardCharsets.UTF_8))) {
       StringBuilder builder = new StringBuilder();
-
+      String line;
       boolean isLongComment = false;
 
-      while (iterator.hasNext()) {
-        String s = iterator.next().trim() + "\n";
+      while ((line = reader.readLine()) != null) {
+        String s = line.trim() + "\n";
 
         // Comment skipper
         if (skipComments) {
           if (isLongComment) {
-            if (s.endsWith("*/")) {
+            if (s.endsWith("*/\n") || s.contains("*/")) {
               isLongComment = false;
             }
             continue;
