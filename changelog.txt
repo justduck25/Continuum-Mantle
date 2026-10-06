@@ -1,17 +1,19 @@
 Continuum Core 26.1.2-1.12.3
 
-Performance
-- Asynchronous book structure loading and page caching to eliminate render thread freezing when opening the Encyclopedia of Tinkering or browsing structure previews.
+Performance & Optimizations
+- Asynchronous book structure loading and page caching: Resolved client render thread freezing when opening the Encyclopedia of Tinkering or navigating 3D multiblock previews (StructurePreviewRenderer).
 
-Fixes
-- Fluid blocks: Updated entityInside method to Minecraft 26.1 and resolved burning sound spam when touching hot fluids or burning blocks.
-- RetexturedBlock: Added 4-argument getCloneItemStack overload for Minecraft 26.1 compatibility.
-- Model geometry: Corrected UV scaling, face winding, and surface normals for item layer extrusion side quads, fixing edge artifacting and visual distortions on layered tools/weapons.
-- ElementScreen: Restored proper color tinting support for custom GUI elements.
+Blocks & Fluid Mechanics
+- Fluid Blocks (entityInside): Updated to Minecraft 26.1 API and eliminated burning sound spam when entities walk or touch molten fluids and burning blocks.
+- RetexturedBlock: Added 4-argument getCloneItemStack overload to fix pick-block and creative drop resolution on 26.1.
 
-Features
-- Added connected blockstate model loader and quad color tinting support for multi-material render states.
-- Added comprehensive Vietnamese (vi_vn) localization support.
+Models & Rendering Pipeline
+- Connected Model Loader: Added connected blockstate model loader (ConnectedModel) supporting border culling and face connection predicates.
+- Quad Color Tinting: Added quad color tinting support for multi-material render states and ElementScreen widgets.
+- Item Layer Side Quads: Fixed UV scaling, vertex winding, and surface normals for item layer extrusion side quads (MantleItemLayerGeometry), eliminating distortion and visual artifacts on weapon/tool edges.
+
+Localization
+- Added complete Vietnamese (vi_vn) localization support.
 
 Compatibility
 - This library release is intended for Continuum Construct 3.12.7 on Minecraft 26.1.2 / NeoForge 26.1.2.
