@@ -1,3 +1,21 @@
+Continuum Core 26.1.2-1.12.3
+
+Performance
+- Asynchronous book structure loading and page caching to eliminate render thread freezing when opening the Encyclopedia of Tinkering or browsing structure previews.
+
+Fixes
+- Fluid blocks: Updated entityInside method to Minecraft 26.1 and resolved burning sound spam when touching hot fluids or burning blocks.
+- RetexturedBlock: Added 4-argument getCloneItemStack overload for Minecraft 26.1 compatibility.
+- Model geometry: Corrected UV scaling, face winding, and surface normals for item layer extrusion side quads, fixing edge artifacting and visual distortions on layered tools/weapons.
+- ElementScreen: Restored proper color tinting support for custom GUI elements.
+
+Features
+- Added connected blockstate model loader and quad color tinting support for multi-material render states.
+- Added comprehensive Vietnamese (vi_vn) localization support.
+
+Compatibility
+- This library release is intended for Continuum Construct 3.12.7 on Minecraft 26.1.2 / NeoForge 26.1.2.
+
 Continuum Core 26.1.2-1.12.2
 
 Fixes

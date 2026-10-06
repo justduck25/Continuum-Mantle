@@ -1,92 +1,109 @@
 # Continuum Core
 
-> Shared library code for the NeoForge 26.1 Continuum Construct port.
+[![Minecraft](https://img.shields.io/badge/Minecraft-26.1.2-blue.svg)](https://minecraft.net/)
+[![NeoForge](https://img.shields.io/badge/NeoForge-26.1.2.106+-orange.svg)](https://neoforged.net/)
+[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-**Continuum Core** is a community-maintained NeoForge 26.1 fork of the original **Mantle** library. It provides the shared APIs, data helpers, recipe utilities, model helpers, and compatibility glue required by Continuum Construct and related ports.
+> Shared foundational library for **Continuum Construct** on Minecraft 26.1 / NeoForge.
 
-This is not an official SlimeKnights release. The original Mantle project, source code, assets, design, and license remain credited to SlimeKnights. The technical `mantle` mod id is intentionally preserved so dependent mods can continue to load against the library, while the public fork branding has been renamed to Continuum Core.
+**Continuum Core** is a community-maintained NeoForge 26.1 fork of the classic **Mantle** library by SlimeKnights. It delivers the core APIs, custom model infrastructure, fluid mechanics, modular in-game book engine, data generation helpers, and registration utilities required by Continuum Construct and affiliated addon ports.
 
-## Port target
+> [!NOTE]
+> **Mod ID & Compatibility:** The technical mod ID `mantle` and Java package `slimeknights.mantle` are intentionally retained for binary, save-game, and data pack compatibility. The public branding is **Continuum Core**. This is a community fork and not an official SlimeKnights release.
 
-| Component | Version |
-|---|---|
-| Minecraft | 26.1.2 |
-| NeoForge | 26.1.2.78+ |
-| Java | 25 |
-| Gradle | 9.1 |
+---
 
-## Current support
+## 🎯 Port Target & Compatibility Matrix
 
-This port focuses on the library surface needed by the current NeoForge 26.1 Continuum Construct port:
+| Component | Target Version | Supported Range |
+|---|---|---|
+| **Minecraft** | `26.1.2` | `[26.1.2, 26.2)` |
+| **NeoForge** | `26.1.2.106` | `[26.1.2.78, 26.2)` |
+| **Java Toolchain** | Java 25 | JDK 21+ required to run Gradle |
+| **Gradle** | `9.1` | Wrapper included (`gradlew.bat`) |
+| **Continuum Core Version** | `1.12.3` | Artifact: `ContinuumCore-26.1.2-1.12.3.jar` |
 
-- Registration helpers and object wrappers used by the port.
-- Data generation helpers for resources, recipes, tags, and loot.
-- Fluid, transfer, inventory, and recipe utility classes.
-- Client, model, tooltip, and screen helpers updated for current NeoForge/Minecraft APIs.
-- Recipe decode and sync safety fixes for modern NeoForge servers and large modpacks.
-- JEI compile/runtime support for development where the port still uses library-side integration points.
+---
 
-Historical integrations or APIs are supported only when they are used by the NeoForge 26.1 port and have been tested against current dependencies.
+## ⚙️ Core Architecture & Features
 
-## Building from source
+### 1. Advanced Model Loaders
+Ported to modern Minecraft 26.1 unbaked geometry standards (`AbstractUnbakedModel` + `ExtendedUnbakedGeometry` with `CuboidModelElement` deserialization):
+* **`item_layer`** (`MantleItemLayerModel` / `MantleItemLayerGeometry`): Multi-pass tinted quad generation for complex layered item sprites.
+* **`retextured`** (`RetexturedModel`): Dynamic block model texture swapping and retextured metadata.
+* **`connected`** (`ConnectedModel`): Connection textures, dynamic face predicates, and border culling.
+* **`colored_block`** (`ColoredBlockModel`): Per-element color mapping (`ColorData`) without full model duplicates.
+* **`nbt_key`** (`NBTKeyModel`): Dynamic texture selection driven by item/block NBT data keys.
 
-Requirements:
+### 2. Modular In-Game Book Engine (`slimeknights.mantle.client.book`)
+* Full framework for interactive guidebooks with custom page layouts, section indices, and styling.
+* **3D Isometric Structure Preview** (`StructurePreviewRenderer`): Real-time isometric projection preview with depth sorting (painter's algorithm) and height-based lighting.
+* **Performance Optimizations**: Asynchronous lazy-loading of structure templates and book pages to prevent client thread stutters when browsing catalogs.
+* Multi-language localization support with complete upstream synchronization.
 
-- Git available on the system `PATH`.
-- JDK 25.
-- A working internet connection for Gradle dependencies and Minecraft/NeoForge artifacts.
+### 3. Fluid & Inventory Infrastructure
+* **`FluidRenderer`**: Built for Minecraft 26.1's modern Blaze3D pipeline, providing cuboid fluid rendering and camera submersion quads (`RenderTypes.entityTranslucent`).
+* Transfer and fluid handling utilities aligned with NeoForge capability patterns.
+* Accurate fluid unit formatting, tooltips, and container interaction helpers.
 
-From the repository root, run:
+### 4. Registration & Data Loading
+* Modern `RecordLoadable` and codec infrastructure for robust, crash-resilient JSON serialization and network synchronization.
+* Safe registry wrappers and lifecycle handlers built on NeoForge `DeferredRegister` / `DeferredHolder`.
+* Full Data Provider framework for recipes, tags, loot tables, and client assets.
+
+### 5. Third-Party Integrations
+* **JEI**: Custom entity ingredient rendering (`EntityIngredientRenderer`) utilizing `EntityRenderDispatcher` and `GuiGraphicsExtractor`.
+
+---
+
+## 🏗️ Building from Source
+
+### Prerequisites
+* **Git** installed and available on system `PATH`.
+* **JDK 21** or higher installed (Gradle will auto-provision Java 25 via toolchain if needed).
+* Active internet connection for fetching dependencies and Minecraft/NeoForge mappings.
+
+### Build Commands
+
+From the `Mantle` directory:
 
 ```powershell
+# Compile Java source code
 .\gradlew.bat compileJava
+
+# Build and assemble the release JAR
 .\gradlew.bat assemble
-```
 
-To start a development client:
+# Run data generation
+.\gradlew.bat runData
 
-```powershell
+# Launch the development client
 .\gradlew.bat runClient
 ```
 
-To generate data:
-
-```powershell
-.\gradlew.bat runData
+The resulting library JAR will be generated under:
+```
+build/libs/ContinuumCore-${minecraft_version}-${mantle_version}.jar
 ```
 
-Build artifacts are written under `build/libs`. Generated resources are written under `src/generated`. Do not edit generated files manually; update the corresponding data provider or source resource and run datagen again.
+> [!IMPORTANT]
+> **Consuming in Continuum Construct:** When modifying Core, always run `.\gradlew.bat assemble` in `Mantle` before compiling `Tcon4`. Continuum Construct consumes this exact built JAR from `../Mantle/build/libs/`.
 
-## Issue reporting
+---
 
-Please include:
+## 🐛 Issue Reporting & Feedback
 
-- Minecraft version: `26.1.2`.
-- NeoForge version/build.
-- Continuum Core version or commit.
-- Versions of dependent mods, especially Continuum Construct.
-- Versions of other mods that may be related to the issue.
-- Exact steps to reproduce the problem.
-- Relevant screenshots or video.
-- For crashes or runtime errors, attach `latest.log`, `debug.log`, or the crash report.
+When reporting issues or bugs, please provide:
+1. **Minecraft & NeoForge Versions**: Exact build numbers (e.g., Minecraft `26.1.2`, NeoForge `26.1.2.106`).
+2. **Mod Versions**: Specific Continuum Core and Continuum Construct build/commit IDs.
+3. **Environment**: Client (singleplayer), LAN, or Dedicated Server.
+4. **Logs**: Complete `logs/latest.log` or crash report (`crash-reports/`).
+5. **Reproduction Steps**: Step-by-step instructions to reproduce the issue, along with any relevant screenshots.
 
-Please mention whether the issue happens with this NeoForge 26.1 fork only, or also happens in an official upstream Mantle build.
+---
 
-## Documentation
+## 📜 Credits and License
 
-For original Mantle source and official upstream releases, see the [SlimeKnights Mantle repository](https://github.com/SlimeKnights/Mantle).
-
-For Tinkers' Construct documentation and addon/datapack references, see the [SlimeKnights documentation](https://slimeknights.github.io/docs/).
-
-## Credits and license
-
-Mantle is an original project by [SlimeKnights](https://github.com/SlimeKnights).
-
-This NeoForge 26.1 community fork is maintained by **justduck** under the public name **Continuum Core**.
-
-The MIT License (MIT)
-Copyright (c) 2013-2022 Slime Knights (mDiyo, fuj1n, Sunstrike, progwml6, pillbox, alexbegt, KnightMiner)
-
-Code, textures, binaries, and documentation are licensed under the [MIT License](LICENSE), unless a different license is noted in the relevant file or asset. The copyright notice and license text must be included in all copies or substantial portions of the software.
-
-Any alternate licenses are noted where appropriate.
+* **Original Project**: Mantle is an original project created and designed by [SlimeKnights](https://github.com/SlimeKnights) (mDiyo, fuj1n, Sunstrike, progwml6, pillbox, alexbegt, KnightMiner).
+* **Port Maintainer**: Maintained for NeoForge 26.1 by **justduck** under the public name **Continuum Core**.
+* **License**: Code, textures, and assets are licensed under the [MIT License](LICENSE).
