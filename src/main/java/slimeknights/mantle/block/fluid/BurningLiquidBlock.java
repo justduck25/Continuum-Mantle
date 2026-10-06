@@ -13,6 +13,9 @@ import slimeknights.mantle.registration.deferred.FluidDeferredRegister;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.InsideBlockEffectApplier;
+
 /** Liquid block setting the entity on fire. */
 public class BurningLiquidBlock extends LiquidBlock {
   private final int burnTime;
@@ -24,11 +27,15 @@ public class BurningLiquidBlock extends LiquidBlock {
     this.damage = damage;
   }
 
-  public void entityInside(BlockState state, Level level, BlockPos pos, Entity entity) {
-    if (!entity.fireImmune() && !state.getFluidState().isEmpty()) {
-      entity.setRemainingFireTicks(Math.max(entity.getRemainingFireTicks(), burnTime * 20));
-      entity.hurt(entity.damageSources().lava(), damage);
-      entity.playSound(SoundEvents.GENERIC_BURN, 0.4F, 2.0F + level.getRandom().nextFloat() * 0.4F);
+  @Override
+  protected void entityInside(BlockState state, Level level, BlockPos pos, Entity entity, InsideBlockEffectApplier applier, boolean useShape) {
+    if (!entity.fireImmune() && entity.getFluidTypeHeight(fluid.getFluidType()) > 0) {
+      if (level instanceof ServerLevel serverLevel) {
+        entity.igniteForSeconds(burnTime);
+        if (entity.hurtServer(serverLevel, entity.damageSources().lava(), damage)) {
+          entity.playSound(SoundEvents.GENERIC_BURN, 0.4F, 2.0F + level.getRandom().nextFloat() * 0.4F);
+        }
+      }
     }
   }
 

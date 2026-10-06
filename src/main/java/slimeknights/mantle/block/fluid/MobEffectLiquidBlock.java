@@ -14,6 +14,8 @@ import slimeknights.mantle.registration.deferred.FluidDeferredRegister;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
+import net.minecraft.world.entity.InsideBlockEffectApplier;
+
 /** Liquid block applying an effect to entities inside it. */
 public class MobEffectLiquidBlock extends LiquidBlock {
   private final Supplier<MobEffectInstance> effect;
@@ -23,8 +25,9 @@ public class MobEffectLiquidBlock extends LiquidBlock {
     this.effect = effect;
   }
 
-  public void entityInside(BlockState state, Level level, BlockPos pos, Entity entity) {
-    if (!state.getFluidState().isEmpty() && entity instanceof LivingEntity living) {
+  @Override
+  protected void entityInside(BlockState state, Level level, BlockPos pos, Entity entity, InsideBlockEffectApplier applier, boolean useShape) {
+    if (!level.isClientSide() && entity.getFluidTypeHeight(fluid.getFluidType()) > 0 && entity instanceof LivingEntity living) {
       living.addEffect(this.effect.get());
     }
   }
