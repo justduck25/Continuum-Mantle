@@ -40,6 +40,14 @@ public class ColoredBlockModel extends AbstractUnbakedModel {
     super.resolveDependencies(resolver);
   }
 
+  public List<CuboidModelElement> elements() {
+    return elements;
+  }
+
+  public List<ColorData> colorData() {
+    return colorData;
+  }
+
   @Override
   public ExtendedUnbakedGeometry geometry() {
     return new ColoredGeometry(elements, colorData, parameters.textures());
@@ -82,7 +90,7 @@ public class ColoredBlockModel extends AbstractUnbakedModel {
 
       QuadCollection.Builder quadBuilder = new QuadCollection.Builder();
       if (!elements.isEmpty()) {
-        UnbakedElementsHelper.bakeElements(baker, quadBuilder, elements, materialGetter, state);
+        ModelHelper.bakeElements(baker, quadBuilder, elements, colorData, materialGetter, state);
       }
       return quadBuilder.build();
     }

@@ -45,6 +45,7 @@ import slimeknights.mantle.client.model.NBTKeyModel;
 import slimeknights.mantle.client.model.RetexturedBlockStateModel;
 import slimeknights.mantle.client.model.RetexturedItemModel;
 import slimeknights.mantle.client.model.RetexturedModel;
+import slimeknights.mantle.client.model.connected.ConnectedBlockStateModel;
 import slimeknights.mantle.client.model.connected.ConnectedModel;
 import slimeknights.mantle.client.model.util.ColoredBlockModel;
 import slimeknights.mantle.client.model.util.MantleItemLayerModel;
@@ -90,6 +91,7 @@ public class ClientEvents {
   @SubscribeEvent
   static void registerBlockStateModels(RegisterBlockStateModels event) {
     event.registerModel(RetexturedBlockStateModel.Unbaked.ID, RetexturedBlockStateModel.Unbaked.MAP_CODEC);
+    event.registerModel(ConnectedBlockStateModel.Unbaked.ID, ConnectedBlockStateModel.Unbaked.MAP_CODEC);
   }
 
   @SubscribeEvent

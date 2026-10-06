@@ -118,4 +118,70 @@ public class ModelHelper {
       throw new JsonParseException("Invalid '" + key + "' " + i + " found, only 0/90/180/270 allowed");
     }
   }
+
+  /**
+   * Bakes elements with per-element color data and luminosity support.
+   */
+  public static void bakeElements(
+      net.minecraft.client.resources.model.ModelBaker baker,
+      net.minecraft.client.resources.model.geometry.QuadCollection.Builder builder,
+      java.util.List<net.minecraft.client.resources.model.cuboid.CuboidModelElement> elements,
+      java.util.List<slimeknights.mantle.client.model.builder.ColorData> colorData,
+      Function<String, net.minecraft.client.resources.model.sprite.Material.Baked> materialGetter,
+      net.minecraft.client.renderer.block.dispatch.ModelState modelState) {
+    for (int i = 0; i < elements.size(); i++) {
+      net.minecraft.client.resources.model.cuboid.CuboidModelElement element = elements.get(i);
+      slimeknights.mantle.client.model.builder.ColorData data = colorData.size() == 1 ? colorData.get(0) : slimeknights.mantle.util.LogicHelper.getOrDefault(colorData, i, slimeknights.mantle.client.model.builder.ColorData.DEFAULT);
+      int color = data.color();
+      int luminosity = data.luminosity();
+
+      element.faces().forEach((side, face) -> {
+        net.minecraft.client.resources.model.sprite.Material.Baked material = materialGetter.apply(face.texture());
+        if (material == null) return;
+        int lightEmission = luminosity >= 0 ? luminosity : element.lightEmission();
+        net.minecraft.client.resources.model.geometry.BakedQuad quad = net.minecraft.client.resources.model.cuboid.FaceBakery.bakeQuad(
+            baker,
+            element.from(),
+            element.to(),
+            face,
+            material,
+            side,
+            modelState,
+            element.rotation(),
+            element.shade(),
+            lightEmission);
+        if (color != -1) {
+          quad = withColor(quad, color, baker);
+        }
+        if (face.cullForDirection() == null) {
+          builder.addUnculledFace(quad);
+        } else {
+          builder.addCulledFace(net.minecraft.core.Direction.rotate(modelState.transformation().getMatrix(), face.cullForDirection()), quad);
+        }
+      });
+    }
+  }
+
+  /**
+   * Applies a vertex color to a BakedQuad.
+   */
+  public static net.minecraft.client.resources.model.geometry.BakedQuad withColor(net.minecraft.client.resources.model.geometry.BakedQuad quad, int color, net.minecraft.client.resources.model.ModelBaker baker) {
+    net.neoforged.neoforge.client.model.quad.BakedColors bakedColors = net.neoforged.neoforge.client.model.quad.BakedColors.of(color);
+    if (baker != null && baker.interner() != null) {
+      bakedColors = baker.interner().colors(bakedColors);
+    }
+    return new net.minecraft.client.resources.model.geometry.BakedQuad(
+        quad.position0(),
+        quad.position1(),
+        quad.position2(),
+        quad.position3(),
+        quad.packedUV0(),
+        quad.packedUV1(),
+        quad.packedUV2(),
+        quad.packedUV3(),
+        quad.direction(),
+        quad.materialInfo(),
+        quad.bakedNormals(),
+        bakedColors);
+  }
 }
