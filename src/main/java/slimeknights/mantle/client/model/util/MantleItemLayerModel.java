@@ -316,17 +316,17 @@ public class MantleItemLayerModel extends AbstractUnbakedModel {
 
     switch (side) {
       case WEST -> { z0 = 0.53125F; z1 = 0.46875F; y1 = (float)(v + size) / height; }
-      case EAST -> { z0 = 0.53125F; z1 = 0.46875F; y1 = (float)(v + size) / height; }
+      case EAST -> { y1 = (float)(v + size) / height; }
       case DOWN -> { z0 = 0.53125F; z1 = 0.46875F; x1 = (float)(u + size) / width; }
       case UP -> { x1 = (float)(u + size) / width; }
     }
 
     float dx = (float) side.getUnitVec3i().getX() * eps / width;
     float dy = (float) side.getUnitVec3i().getY() * eps / height;
-    float u0 = 16.0F * (x0 - dx);
-    float u1 = 16.0F * (x1 - dx);
-    float v0 = 16.0F * (1.0F - y0 - dy);
-    float v1 = 16.0F * (1.0F - y1 - dy);
+    float u0 = x0 - dx;
+    float u1 = x1 - dx;
+    float v0 = 1.0F - y0 - dy;
+    float v1 = 1.0F - y1 - dy;
 
     Direction quadSide = side.getAxis() == Direction.Axis.Y ? side.getOpposite() : side;
     results.add(buildQuad(builder, consumer, quadSide, color, tint, luminosity, sprite, interner, chunkLayer, renderType,
@@ -342,7 +342,7 @@ public class MantleItemLayerModel extends AbstractUnbakedModel {
       float x2, float y2, float z2, float u2, float v2,
       float x3, float y3, float z3, float u3, float v3) {
     builder.setTintIndex(tint);
-    builder.setShade(false);
+    builder.setShade(emissivity == 0);
     builder.setAmbientOcclusion(true);
     builder.setLightEmission(emissivity << 4);
     builder.setSprite(sprite, chunkLayer, renderType);
@@ -360,17 +360,17 @@ public class MantleItemLayerModel extends AbstractUnbakedModel {
       float x2, float y2, float z2, float u2, float v2,
       float x3, float y3, float z3, float u3, float v3) {
     builder.setDirection(side);
-    putVertex(consumer, x0, y0, z0, u0, v0, color);
-    putVertex(consumer, x1, y1, z1, u1, v1, color);
-    putVertex(consumer, x2, y2, z2, u2, v2, color);
-    putVertex(consumer, x3, y3, z3, u3, v3, color);
+    putVertex(consumer, side, x0, y0, z0, u0, v0, color);
+    putVertex(consumer, side, x1, y1, z1, u1, v1, color);
+    putVertex(consumer, side, x2, y2, z2, u2, v2, color);
+    putVertex(consumer, side, x3, y3, z3, u3, v3, color);
   }
 
-  private static void putVertex(VertexConsumer consumer, float x, float y, float z, float u, float v, int color) {
+  private static void putVertex(VertexConsumer consumer, Direction side, float x, float y, float z, float u, float v, int color) {
     consumer.addVertex(x, y, z);
     consumer.setColor(color);
     consumer.setUv(u, v);
-    consumer.setNormal(0.0F, 0.0F, 1.0F);
+    consumer.setNormal((float) side.getUnitVec3i().getX(), (float) side.getUnitVec3i().getY(), (float) side.getUnitVec3i().getZ());
   }
 
   private static final Direction[] HORIZONTALS = {Direction.UP, Direction.DOWN};
